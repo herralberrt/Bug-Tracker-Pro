@@ -55,4 +55,11 @@ public class App {
             System.out.println("error writing to output file: " + e.getMessage());
         }
     }
+
+    public static void changeStatus(ObjectNode node) {
+    }
+
+    public static void undoChangeStatus(ObjectNode node) {
+    }
+
 }
