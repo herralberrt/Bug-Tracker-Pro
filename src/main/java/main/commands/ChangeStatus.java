@@ -13,11 +13,9 @@ public class ChangeStatus implements Command {
 
     @Override
     public void execute() {
-        App.changeStatus(node);
     }
 
     @Override
     public void undo() {
-        App.undoChangeStatus(node);
     }
 }

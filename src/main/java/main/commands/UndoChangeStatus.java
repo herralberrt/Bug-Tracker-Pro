@@ -13,7 +13,6 @@ public class UndoChangeStatus implements Command {
 
     @Override
     public void execute() {
-        App.undoChangeStatus(node);
     }
 
     @Override

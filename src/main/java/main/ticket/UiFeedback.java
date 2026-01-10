@@ -1,15 +1,18 @@
 package main.ticket;
 
-import java.time.LocalDate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.enums.*;
+
+import java.time.LocalDate;
 
 public class UiFeedback extends Ticket {
 
-    private final String uiElementId; // optional
+    private final String uiElementId;
     private final BusinessValue businessValue;
     private final int usabilityScore;
-    private final String screenshotUrl; // optional
-    private final String suggestedFix;  // optional
+    private final String screenshotUrl;
+    private final String suggestedFix;
 
     private UiFeedback(Builder builder) {
         super(builder.id, Type.UI_FEEDBACK, builder.title, builder.businessPriority,
@@ -41,68 +44,44 @@ public class UiFeedback extends Ticket {
         private String screenshotUrl;
         private String suggestedFix;
 
-        public Builder id(int id) {
-            this.id = id;
-            return this;
-        }
+        public Builder id(int id) { this.id = id; return this; }
+        public Builder title(String title) { this.title = title; return this; }
+        public Builder businessPriority(BusinessPriority bp) { this.businessPriority = bp; return this; }
+        public Builder expertiseArea(ExpertiseArea ea) { this.expertiseArea = ea; return this; }
+        public Builder description(String desc) { this.description = desc; return this; }
+        public Builder reportedBy(String reporter) { this.reportedBy = reporter; return this; }
+        public Builder createdAt(LocalDate date) { this.createdAt = date; return this; }
+        public Builder uiElementId(String id) { this.uiElementId = id; return this; }
+        public Builder businessValue(BusinessValue bv) { this.businessValue = bv; return this; }
+        public Builder usabilityScore(int score) { this.usabilityScore = score; return this; }
+        public Builder screenshotUrl(String url) { this.screenshotUrl = url; return this; }
+        public Builder suggestedFix(String fix) { this.suggestedFix = fix; return this; }
 
-        public Builder title(String title) {
-            this.title = title;
-            return this;
-        }
+        public UiFeedback build() { return new UiFeedback(this); }
+    }
 
-        public Builder businessPriority(BusinessPriority bp) {
-            this.businessPriority = bp;
-            return this;
-        }
+    @Override
+    public ObjectNode toJson(ObjectMapper mapper) {
+        ObjectNode node = mapper.createObjectNode();
 
-        public Builder expertiseArea(ExpertiseArea ea) {
-            this.expertiseArea = ea;
-            return this;
-        }
+        node.put("id", id);
+        node.put("type", type.name());
+        node.put("title", title);
+        node.put("businessPriority", businessPriority.name());
+        node.put("status", status.name());
+        node.put("createdAt", createdAt.toString());
+        node.put("assignedAt", "");
+        node.put("solvedAt", solvedAt == null ? "" : solvedAt.toString());
+        node.put("assignedTo", "");
+        node.put("reportedBy", reportedBy);
 
-        public Builder description(String desc) {
-            this.description = desc;
-            return this;
-        }
+        if (uiElementId != null) node.put("uiElementId", uiElementId);
+        node.put("businessValue", businessValue.name());
+        node.put("usabilityScore", usabilityScore);
+        if (screenshotUrl != null) node.put("screenshotUrl", screenshotUrl);
+        if (suggestedFix != null) node.put("suggestedFix", suggestedFix);
 
-        public Builder reportedBy(String reporter) {
-            this.reportedBy = reporter;
-            return this;
-        }
-
-        public Builder createdAt(LocalDate date) {
-            this.createdAt = date;
-            return this;
-        }
-
-        public Builder uiElementId(String id) {
-            this.uiElementId = id;
-            return this;
-        }
-
-        public Builder businessValue(BusinessValue bv) {
-            this.businessValue = bv;
-            return this;
-        }
-
-        public Builder usabilityScore(int score) {
-            this.usabilityScore = score;
-            return this;
-        }
-
-        public Builder screenshotUrl(String url) {
-            this.screenshotUrl = url;
-            return this;
-        }
-
-        public Builder suggestedFix(String fix) {
-            this.suggestedFix = fix;
-            return this;
-        }
-
-        public UiFeedback build() {
-            return new UiFeedback(this);
-        }
+        node.set("comments", mapper.createArrayNode());
+        return node;
     }
 }

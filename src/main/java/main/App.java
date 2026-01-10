@@ -1,3 +1,4 @@
+// file: main/App.java
 package main;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +12,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class App {
+public final class App {
 
     private App() { }
 
@@ -21,9 +22,12 @@ public class App {
             new ObjectMapper().writer().withDefaultPrettyPrinter();
 
     private static final List<ObjectNode> users = new ArrayList<>();
+    private static final List<ObjectNode> outputs = new ArrayList<>();
 
     public static void run(final String inputPath, final String outputPath) {
-        List<ObjectNode> outputs = new ArrayList<>();
+        outputs.clear();
+        users.clear();
+
         ObjectMapper mapper = new ObjectMapper();
 
         try {
@@ -51,7 +55,6 @@ public class App {
         }
 
         for (ObjectNode commandNode : commands) {
-
             String username = commandNode.get("username").asText();
 
             if (!userExists(username)) {
@@ -63,19 +66,56 @@ public class App {
                 Command command = CommandFactory.createCommand(commandNode);
                 command.execute();
             } catch (Exception ignored) {
+                // Conform cerintei, nu poluam output-ul cu erori runtime necerute.
             }
         }
 
         try {
             File outputFile = new File(outputPath);
-            outputFile.getParentFile().mkdirs();
+            if (outputFile.getParentFile() != null) {
+                outputFile.getParentFile().mkdirs();
+            }
             WRITER.writeValue(outputFile, outputs);
         } catch (IOException e) {
             System.out.println("Error writing output file");
         }
     }
 
+    public static void addOutput(ObjectNode out) {
+        outputs.add(out);
+    }
+
+    public static String getUserRole(String username) {
+        for (ObjectNode user : users) {
+            if (user.get("username").asText().equals(username)) {
+                if (user.has("role")) {
+                    return user.get("role").asText(); // ex: "MANAGER"/"DEVELOPER"/"REPORTER"
+                }
+                break;
+            }
+        }
+        return "";
+    }
+
     private static boolean userExists(String username) {
+        for (ObjectNode user : users) {
+            if (user.get("username").asText().equals(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean userExistsInternal(String username) {
+        for (ObjectNode user : users) {
+            if (user.get("username").asText().equals(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean userExistsPublic(String username) {
         for (ObjectNode user : users) {
             if (user.get("username").asText().equals(username)) {
                 return true;
@@ -94,11 +134,5 @@ public class App {
         error.put("error", "The user " + commandNode.get("username").asText() + " does not exist.");
 
         return error;
-    }
-
-    public static void changeStatus(ObjectNode node) {
-    }
-
-    public static void undoChangeStatus(ObjectNode node) {
     }
 }
