@@ -28,6 +28,30 @@ public final class CommandFactory {
             case "undoAddComment":
                 return new UndoAddComment(node);
 
+            case "createMilestone":
+                return new CreateMilestone(node);
+
+            case "viewMilestones":
+                return new ViewMilestones(node);
+
+            case "assignTicket":
+                return new AssignTicket(node);
+
+            case "viewAssignedTickets":
+                return new ViewAssignedTickets(node);
+
+            case "viewTicketHistory":
+                return new ViewTicketHistory(node);
+
+            case "viewNotifications":
+                return new ViewNotifications(node);
+
+            case "search":
+                return new Search(node);
+
+            case "generatePerformanceReport":
+                return new GeneratePerformanceReport(node);
+
             default:
                 throw new IllegalArgumentException("Unknown command: " + commandName);
         }
