@@ -22,12 +22,13 @@ public class ReportTicket implements Command {
     public void execute() {
 
         String username = node.get("username").asText();
+        String timestamp = node.get("timestamp").asText();
 
-        if (AppState.investorsLost()) {
+        if (!AppState.isInTestingPhase(timestamp)) {
             ObjectNode out = mapper.createObjectNode();
             out.put("command", "reportTicket");
             out.put("username", username);
-            out.put("timestamp", node.get("timestamp").asText());
+            out.put("timestamp", timestamp);
             out.put("error", "Tickets can only be reported during testing phases.");
             App.addOutput(out);
             return;

@@ -1,14 +1,19 @@
 package main;
 
+import main.milestone.Milestone;
 import main.ticket.Ticket;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class AppState {
 
     private static final List<Ticket> tickets = new ArrayList<>();
+    private static final List<Milestone> milestones = new ArrayList<>();
     private static int nextTicketId = 0;
     private static boolean investorsLost = false;
+    private static LocalDate testingPhaseStart = null;
+    private static final int TESTING_PHASE_DURATION = 12;
 
     private AppState() {}
 
@@ -32,6 +37,21 @@ public final class AppState {
         investorsLost = true;
     }
 
+    public static void startTestingPhase(String timestamp) {
+        if (testingPhaseStart == null) {
+            testingPhaseStart = LocalDate.parse(timestamp);
+        }
+    }
+
+    public static boolean isInTestingPhase(String timestamp) {
+        if (testingPhaseStart == null) {
+            return false;
+        }
+        LocalDate currentDate = LocalDate.parse(timestamp);
+        LocalDate testingPhaseEnd = testingPhaseStart.plusDays(TESTING_PHASE_DURATION - 1);
+        return !currentDate.isAfter(testingPhaseEnd);
+    }
+
     public static boolean isReporter(String username) {
         return App.getUserRole(username).equals("REPORTER");
     }
@@ -42,5 +62,57 @@ public final class AppState {
 
     public static boolean userExists(String username) {
         return App.userExistsInternal(username);
+    }
+
+    public static void addMilestone(Milestone milestone) {
+        milestones.add(milestone);
+    }
+
+    public static List<Milestone> getMilestones() {
+        return milestones;
+    }
+
+    public static Milestone getMilestoneByName(String name) {
+        for (Milestone m : milestones) {
+            if (m.getName().equals(name)) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    public static boolean isTicketInMilestone(int ticketId) {
+        for (Milestone m : milestones) {
+            if (m.getTickets().contains(ticketId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static String getMilestoneNameByTicket(int ticketId) {
+        for (Milestone m : milestones) {
+            if (m.getTickets().contains(ticketId)) {
+                return m.getName();
+            }
+        }
+        return null;
+    }
+
+    public static void removeMilestone(Milestone milestone) {
+        milestones.remove(milestone);
+    }
+
+    public static Ticket getTicketById(int id) {
+        for (Ticket ticket : tickets) {
+            if (ticket.getId() == id) {
+                return ticket;
+            }
+        }
+        return null;
+    }
+
+    public static com.fasterxml.jackson.databind.node.ObjectNode getDeveloperByUsername(String username) {
+        return App.getDeveloperByUsername(username);
     }
 }

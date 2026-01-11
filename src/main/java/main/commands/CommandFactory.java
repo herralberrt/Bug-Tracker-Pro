@@ -11,6 +11,11 @@ public final class CommandFactory {
             case "reportTicket" -> new ReportTicket(node);
             case "viewTickets" -> new ViewTickets(node);
             case "lostInvestors" -> new LostInvestors(node);
+            case "createMilestone" -> new CreateMilestone(node);
+            case "viewMilestones" -> new ViewMilestones(node);
+            case "assignTicket" -> new AssignTicket(node);
+            case "undoAssignTicket" -> new UndoAssignTicket(node);
+            case "viewAssignedTickets" -> new ViewAssignedTickets(node);
             default -> throw new IllegalArgumentException("Unknown command");
         };
     }

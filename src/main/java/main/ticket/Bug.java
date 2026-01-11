@@ -47,21 +47,74 @@ public class Bug extends Ticket {
         private String environment;
         private Integer errorCode;
 
-        public Builder id(int id) { this.id = id; return this; }
-        public Builder title(String title) { this.title = title; return this; }
-        public Builder businessPriority(BusinessPriority bp) { this.businessPriority = bp; return this; }
-        public Builder expertiseArea(ExpertiseArea ea) { this.expertiseArea = ea; return this; }
-        public Builder description(String desc) { this.description = desc; return this; }
-        public Builder reportedBy(String reporter) { this.reportedBy = reporter; return this; }
-        public Builder createdAt(LocalDate date) { this.createdAt = date; return this; }
-        public Builder expectedBehavior(String v) { this.expectedBehavior = v; return this; }
-        public Builder actualBehavior(String v) { this.actualBehavior = v; return this; }
-        public Builder frequency(Frequency f) { this.frequency = f; return this; }
-        public Builder severity(Severity s) { this.severity = s; return this; }
-        public Builder environment(String env) { this.environment = env; return this; }
-        public Builder errorCode(Integer code) { this.errorCode = code; return this; }
+        public Builder id(int id) {
+            this.id = id;
+            return this;
+        }
 
-        public Bug build() { return new Bug(this); }
+        public Builder title(String title) {
+            this.title = title;
+            return this;
+        }
+
+        public Builder businessPriority(BusinessPriority bp) {
+            this.businessPriority = bp;
+            return this;
+        }
+
+        public Builder expertiseArea(ExpertiseArea ea) {
+            this.expertiseArea = ea;
+            return this;
+        }
+
+        public Builder description(String desc) {
+            this.description = desc;
+            return this;
+        }
+
+        public Builder reportedBy(String reporter) {
+            this.reportedBy = reporter;
+            return this;
+        }
+
+        public Builder createdAt(LocalDate date) {
+            this.createdAt = date;
+            return this;
+        }
+
+        public Builder expectedBehavior(String v) {
+            this.expectedBehavior = v;
+            return this;
+        }
+
+        public Builder actualBehavior(String v) {
+            this.actualBehavior = v;
+            return this;
+        }
+
+        public Builder frequency(Frequency f) {
+            this.frequency = f;
+            return this;
+        }
+
+        public Builder severity(Severity s) {
+            this.severity = s;
+            return this;
+        }
+
+        public Builder environment(String env) {
+            this.environment = env;
+            return this;
+        }
+
+        public Builder errorCode(Integer code) {
+            this.errorCode = code;
+            return this;
+        }
+
+        public Bug build() {
+            return new Bug(this);
+        }
     }
 
     @Override
@@ -74,19 +127,8 @@ public class Bug extends Ticket {
         node.put("businessPriority", businessPriority.name());
         node.put("status", status.name());
         node.put("createdAt", createdAt.toString());
-        node.put("assignedAt", "");
-        node.put("solvedAt", solvedAt == null ? "" : solvedAt.toString());
-        node.put("assignedTo", "");
+        node.put("assignedAt", assignedAt == null ? "" : assignedAt.toString());
         node.put("reportedBy", reportedBy);
-
-        node.put("expectedBehavior", expectedBehavior);
-        node.put("actualBehavior", actualBehavior);
-        node.put("frequency", frequency.name());
-        node.put("severity", severity.name());
-
-        if (environment != null) node.put("environment", environment);
-        if (errorCode != null) node.put("errorCode", errorCode);
-
         node.set("comments", mapper.createArrayNode());
         return node;
     }

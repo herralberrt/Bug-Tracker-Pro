@@ -18,6 +18,8 @@ public abstract class Ticket {
     protected final String reportedBy;
     protected final LocalDate createdAt;
     protected LocalDate solvedAt;
+    protected String assignedTo;
+    protected LocalDate assignedAt;
 
     protected Ticket(
             int id,
@@ -41,6 +43,8 @@ public abstract class Ticket {
         this.reportedBy = reportedBy;
         this.createdAt = createdAt;
         this.solvedAt = solvedAt;
+        this.assignedTo = "";
+        this.assignedAt = null;
     }
 
     public ObjectNode toViewJson(ObjectMapper mapper) {
@@ -52,9 +56,9 @@ public abstract class Ticket {
         node.put("businessPriority", businessPriority.name());
         node.put("status", status.name());
         node.put("createdAt", createdAt.toString());
-        node.put("assignedAt", "");
+        node.put("assignedAt", assignedAt == null ? "" : assignedAt.toString());
         node.put("solvedAt", solvedAt == null ? "" : solvedAt.toString());
-        node.put("assignedTo", "");
+        node.put("assignedTo", assignedTo == null ? "" : assignedTo);
         node.put("reportedBy", reportedBy);
         node.set("comments", mapper.createArrayNode());
 
@@ -73,5 +77,45 @@ public abstract class Ticket {
 
     public int getId() {
         return id;
+    }
+
+    public String getStatus() {
+        return status.name();
+    }
+    
+    public TicketStatus getStatusEnum() {
+        return status;
+    }
+    
+    public void setStatus(TicketStatus status) {
+        this.status = status;
+    }
+    
+    public String getAssignedTo() {
+        return assignedTo;
+    }
+    
+    public void setAssignedTo(String assignedTo) {
+        this.assignedTo = assignedTo;
+    }
+    
+    public LocalDate getAssignedAt() {
+        return assignedAt;
+    }
+    
+    public void setAssignedAt(LocalDate assignedAt) {
+        this.assignedAt = assignedAt;
+    }
+    
+    public BusinessPriority getBusinessPriority() {
+        return businessPriority;
+    }
+    
+    public ExpertiseArea getExpertiseArea() {
+        return expertiseArea;
+    }
+    
+    public Type getType() {
+        return type;
     }
 }
