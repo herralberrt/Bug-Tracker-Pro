@@ -32,18 +32,18 @@ public class ViewAssignedTickets implements Command {
         out.put("timestamp", timestamp);
 
         List<Ticket> assignedTickets = AppState.getTickets()
-            .stream()
-            .filter(t -> username.equals(t.getAssignedTo()))
-            .sorted(
-                Comparator
-                    .comparing(
-                        (Ticket t) -> calculatePriorityNumericalValue(t.getBusinessPriority()),
-                        Comparator.reverseOrder()
-                    )
-                    .thenComparing(Ticket::getCreatedAt)
-                    .thenComparing(Ticket::getId)
-            )
-            .collect(Collectors.toList());
+                .stream()
+                .filter(t -> username.equals(t.getAssignedTo()))
+                .sorted(
+                        Comparator
+                                .comparing(
+                                        (Ticket t) -> calculatePriorityNumericalValue(t.getBusinessPriority()),
+                                        Comparator.reverseOrder()
+                                )
+                                .thenComparing(Ticket::getCreatedAt)
+                                .thenComparing(Ticket::getId)
+                )
+                .collect(Collectors.toList());
 
         ArrayNode ticketsArray = mapper.createArrayNode();
         for (Ticket t : assignedTickets) {

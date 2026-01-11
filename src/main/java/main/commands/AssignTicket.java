@@ -133,6 +133,20 @@ public class AssignTicket implements Command {
         ticket.setAssignedTo(username);
         ticket.setAssignedAt(currentDate);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
+
+        ObjectNode assignedEntry = mapper.createObjectNode();
+        assignedEntry.put("action", "ASSIGNED");
+        assignedEntry.put("by", username);
+        assignedEntry.put("timestamp", timestamp);
+        ticket.addHistoryEntry(assignedEntry);
+
+        ObjectNode statusEntry = mapper.createObjectNode();
+        statusEntry.put("action", "STATUS_CHANGED");
+        statusEntry.put("from", "OPEN");
+        statusEntry.put("to", "IN_PROGRESS");
+        statusEntry.put("by", username);
+        statusEntry.put("timestamp", timestamp);
+        ticket.addHistoryEntry(statusEntry);
     }
 
     private boolean validateDeveloperExpertiseAreaAccess(

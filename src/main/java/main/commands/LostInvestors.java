@@ -13,5 +13,6 @@ public class LostInvestors implements Command {
     }
 
     @Override
-    public void undo() {}
+    public void undo() {
+    }
 }

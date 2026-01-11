@@ -20,11 +20,12 @@ public class Milestone implements Subject {
     private final List<Integer> tickets;
     private final List<String> assignedDevs;
     private final String createdBy;
-
     private final List<Observer> observers = new ArrayList<>();
+    private Integer frozenDaysUntilDue = null;
+    private Integer frozenOverdueBy = null;
 
     public Milestone(String name, List<String> blockingFor, LocalDate dueDate,
-                     LocalDate createdAt, List<Integer> tickets, 
+                     LocalDate createdAt, List<Integer> tickets,
                      List<String> assignedDevs, String createdBy) {
 
         this.name = name;
@@ -38,6 +39,10 @@ public class Milestone implements Subject {
 
     public String getName() {
         return name;
+    }
+
+    public List<String> getBlockingFor() {
+        return blockingFor;
     }
 
     public List<Integer> getTickets() {
@@ -78,6 +83,10 @@ public class Milestone implements Subject {
     }
 
     public int calculateDaysRemainingUntilDue(LocalDate currentDate) {
+        if (frozenDaysUntilDue != null) {
+            return frozenDaysUntilDue;
+        }
+
         if (currentDate.isAfter(dueDate)) {
             return 0;
         }
@@ -85,6 +94,10 @@ public class Milestone implements Subject {
     }
 
     public int calculateDaysOverdue(LocalDate currentDate) {
+        if (frozenOverdueBy != null) {
+            return frozenOverdueBy;
+        }
+
         if (currentDate.isBefore(dueDate) || currentDate.isEqual(dueDate)) {
             return 0;
         }
@@ -99,6 +112,13 @@ public class Milestone implements Subject {
             }
         }
         return "COMPLETED";
+    }
+
+    public void freezeMetricsIfCompleted(LocalDate currentDate) {
+        if (getStatus().equals("COMPLETED") && frozenDaysUntilDue == null) {
+            frozenDaysUntilDue = calculateDaysRemainingUntilDue(currentDate);
+            frozenOverdueBy = calculateDaysOverdue(currentDate);
+        }
     }
 
     public List<Integer> retrieveAllOpenTicketIds() {
@@ -128,56 +148,57 @@ public class Milestone implements Subject {
             return 0.0;
         }
         int closedCount = retrieveAllClosedTicketIds().size();
-        return Math.round((closedCount * 100.0 / tickets.size()) * 100.0) / 100.0;
+        double fraction = closedCount * 1.0 / tickets.size();
+        return Math.round(fraction * 100.0) / 100.0;
     }
 
     public ObjectNode toJson(ObjectMapper mapper, LocalDate currentDate) {
         ObjectNode node = mapper.createObjectNode();
-        
+
         node.put("name", name);
-        
+
         ArrayNode blockingForArray = mapper.createArrayNode();
         for (String blocked : blockingFor) {
             blockingForArray.add(blocked);
         }
         node.set("blockingFor", blockingForArray);
-        
+
         node.put("dueDate", dueDate.toString());
         node.put("createdAt", createdAt.toString());
-        
+
         ArrayNode ticketsArray = mapper.createArrayNode();
         for (Integer ticketId : tickets) {
             ticketsArray.add(ticketId);
         }
         node.set("tickets", ticketsArray);
-        
+
         ArrayNode devsArray = mapper.createArrayNode();
         for (String dev : assignedDevs) {
             devsArray.add(dev);
         }
         node.set("assignedDevs", devsArray);
-        
+
         node.put("createdBy", createdBy);
         node.put("status", getStatus());
         node.put("isBlocked", isBlocked());
         node.put("daysUntilDue", calculateDaysRemainingUntilDue(currentDate));
         node.put("overdueBy", calculateDaysOverdue(currentDate));
-        
+
         ArrayNode openTicketsArray = mapper.createArrayNode();
         for (Integer ticketId : retrieveAllOpenTicketIds()) {
             openTicketsArray.add(ticketId);
         }
         node.set("openTickets", openTicketsArray);
-        
+
         ArrayNode closedTicketsArray = mapper.createArrayNode();
         for (Integer ticketId : retrieveAllClosedTicketIds()) {
             closedTicketsArray.add(ticketId);
         }
         node.set("closedTickets", closedTicketsArray);
-        
+
         node.put("completionPercentage", calculateCompletionPercentage());
-        
-        ArrayNode repartitionArray = mapper.createArrayNode();
+
+        List<ObjectNode> repartitionList = new ArrayList<>();
         for (String dev : assignedDevs) {
             ObjectNode devNode = mapper.createObjectNode();
             devNode.put("developer", dev);
@@ -189,10 +210,24 @@ public class Milestone implements Subject {
                 }
             }
             devNode.set("assignedTickets", devTickets);
+            repartitionList.add(devNode);
+        }
+
+        repartitionList.sort((d1, d2) -> {
+            int size1 = d1.get("assignedTickets").size();
+            int size2 = d2.get("assignedTickets").size();
+            if (size1 != size2) {
+                return Integer.compare(size1, size2);
+            }
+            return d1.get("developer").asText().compareTo(d2.get("developer").asText());
+        });
+
+        ArrayNode repartitionArray = mapper.createArrayNode();
+        for (ObjectNode devNode : repartitionList) {
             repartitionArray.add(devNode);
         }
         node.set("repartition", repartitionArray);
-        
+
         return node;
     }
 

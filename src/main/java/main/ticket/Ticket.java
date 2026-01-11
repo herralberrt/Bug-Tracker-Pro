@@ -24,6 +24,7 @@ public abstract class Ticket {
     protected String assignedTo;
     protected LocalDate assignedAt;
     protected final List<ObjectNode> comments;
+    protected final List<ObjectNode> history;
 
     protected Ticket(
             int id,
@@ -50,6 +51,7 @@ public abstract class Ticket {
         this.assignedTo = "";
         this.assignedAt = null;
         this.comments = new ArrayList<>();
+        this.history = new ArrayList<>();
     }
 
     public ObjectNode toViewJson(ObjectMapper mapper) {
@@ -146,5 +148,29 @@ public abstract class Ticket {
 
     public boolean isAnonymous() {
         return reportedBy == null || reportedBy.isEmpty();
+    }
+
+    public void addHistoryEntry(ObjectNode entry) {
+        history.add(entry);
+    }
+
+    public List<ObjectNode> getHistory() {
+        return history;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public LocalDate getSolvedAt() {
+        return solvedAt;
+    }
+
+    public void setSolvedAt(LocalDate solvedAt) {
+        this.solvedAt = solvedAt;
+    }
+
+    public List<ObjectNode> getComments() {
+        return comments;
     }
 }

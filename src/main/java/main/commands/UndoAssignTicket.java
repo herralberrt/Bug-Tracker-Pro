@@ -41,6 +41,11 @@ public class UndoAssignTicket implements Command {
         ticket.setAssignedTo("");
         ticket.setAssignedAt(null);
         ticket.setStatus(TicketStatus.OPEN);
+        ObjectNode historyEntry = mapper.createObjectNode();
+        historyEntry.put("action", "DE-ASSIGNED");
+        historyEntry.put("by", username);
+        historyEntry.put("timestamp", timestamp);
+        ticket.addHistoryEntry(historyEntry);
     }
 
     @Override

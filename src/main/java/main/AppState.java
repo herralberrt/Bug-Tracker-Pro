@@ -15,7 +15,9 @@ public final class AppState {
     private static LocalDate testingPhaseStart = null;
     private static final int TESTING_PHASE_DURATION = 12;
 
-    private AppState() {}
+    private AppState() {
+
+    }
 
     public static int nextTicketId() {
         return nextTicketId++;
@@ -58,6 +60,14 @@ public final class AppState {
 
     public static boolean isManager(String username) {
         return App.getUserRole(username).equals("MANAGER");
+    }
+
+    public static boolean isDeveloper(String username) {
+        return App.getUserRole(username).equals("DEVELOPER");
+    }
+
+    public static List<Ticket> getAllTickets() {
+        return tickets;
     }
 
     public static boolean userExists(String username) {
@@ -123,4 +133,77 @@ public final class AppState {
         investorsLost = false;
         testingPhaseStart = null;
     }
+
+    public static List<String> getManagerSubordinates(String managerUsername) {
+        com.fasterxml.jackson.databind.node.ObjectNode managerNode = App.getManagerByUsername(managerUsername);
+        if (managerNode != null && managerNode.has("subordinates")) {
+            List<String> subordinates = new ArrayList<>();
+            managerNode.get("subordinates").forEach(node -> subordinates.add(node.asText()));
+            return subordinates;
+        }
+        return new ArrayList<>();
+    }
+
+    public static void checkMilestoneNotifications(String timestamp) {
+        LocalDate currentDate = LocalDate.parse(timestamp);
+
+        for (Milestone milestone : milestones) {
+            if (milestone.isBlocked()) {
+                continue;
+            }
+
+            LocalDate dayBeforeDue = milestone.getDueDate().minusDays(1);
+            if (currentDate.equals(dayBeforeDue)) {
+                String message = "Milestone " + milestone.getName() +
+                        " is due tomorrow. All unresolved tickets are now CRITICAL.";
+                for (String dev : milestone.getAssignedDevs()) {
+                    App.addNotification(dev, timestamp, message);
+                }
+            }
+        }
+    }
+
+    public static void checkMilestoneUnblocking(String blockingMilestoneName, int closedTicketId, String timestamp) {
+        LocalDate currentDate = LocalDate.parse(timestamp);
+        Milestone blockingMilestone = getMilestoneByName(blockingMilestoneName);
+
+        if (blockingMilestone == null) {
+            return;
+        }
+
+        if (!blockingMilestone.containsAnyOpenTickets()) {
+            for (Milestone milestone : milestones) {
+                if (blockingMilestone.getName().equals(milestone.getName())) {
+                    continue;
+                }
+
+                boolean wasBlocked = false;
+                for (Milestone m : milestones) {
+                    if (m.getName().equals(blockingMilestoneName)) {
+                        if (m.getBlockingFor().contains(milestone.getName())) {
+                            wasBlocked = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (wasBlocked) {
+                    if (currentDate.isAfter(milestone.getDueDate())) {
+                        String message = "Milestone " + milestone.getName() +
+                                " was unblocked after due date. All active tickets are now CRITICAL.";
+                        for (String dev : milestone.getAssignedDevs()) {
+                            App.addNotification(dev, timestamp, message);
+                        }
+                    } else {
+                        String message = "Milestone " + milestone.getName() +
+                                " is now unblocked as ticket " + closedTicketId + " has been CLOSED.";
+                        for (String dev : milestone.getAssignedDevs()) {
+                            App.addNotification(dev, timestamp, message);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+

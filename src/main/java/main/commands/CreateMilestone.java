@@ -10,7 +10,6 @@ import main.milestone.Milestone;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.List;
 
 public class CreateMilestone implements Command {
 
@@ -88,9 +87,23 @@ public class CreateMilestone implements Command {
             AppState.removeMilestone(existingMilestone);
         }
 
-        Milestone milestone = new Milestone(name, blockingFor, dueDate, createdAt, tickets, assignedDevs, username);
+        Milestone milestone = new Milestone(name, blockingFor, dueDate, createdAt,
+                                tickets, assignedDevs, username);
 
         AppState.addMilestone(milestone);
+
+        ObjectMapper mapper = new ObjectMapper();
+        for (Integer ticketId : tickets) {
+            main.ticket.Ticket ticket = AppState.getTicketById(ticketId);
+            if (ticket != null) {
+                ObjectNode historyEntry = mapper.createObjectNode();
+                historyEntry.put("action", "ADDED_TO_MILESTONE");
+                historyEntry.put("milestone", name);
+                historyEntry.put("by", username);
+                historyEntry.put("timestamp", timestamp);
+                ticket.addHistoryEntry(historyEntry);
+            }
+        }
 
         String message = "New milestone " + name +
                 " has been created with due date " + dueDate + ".";

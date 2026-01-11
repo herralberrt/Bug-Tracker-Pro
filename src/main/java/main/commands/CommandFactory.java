@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public final class CommandFactory {
 
-    private CommandFactory() {}
+    private CommandFactory() {
+
+    }
 
     public static Command createCommand(ObjectNode node) {
         String command = node.get("command").asText();
@@ -29,6 +31,16 @@ public final class CommandFactory {
             return new AddComment(node);
         } else if (command.equals("undoAddComment")) {
             return new UndoAddComment(node);
+        } else if (command.equals("changeStatus")) {
+            return new ChangeStatus(node);
+        } else if (command.equals("undoChangeStatus")) {
+            return new UndoChangeStatus(node);
+        } else if (command.equals("viewTicketHistory")) {
+            return new ViewTicketHistory(node);
+        } else if (command.equals("search")) {
+            return new Search(node);
+        } else if (command.equals("viewNotifications")) {
+            return new ViewNotifications(node);
         } else {
             throw new IllegalArgumentException("Unknown command");
         }

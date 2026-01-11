@@ -15,7 +15,9 @@ import java.util.Map;
 
 public final class App {
 
-    private App() { }
+    private App() {
+
+    }
 
     private static final String INPUT_USERS_FIELD = "input/database/users.json";
 
@@ -72,6 +74,8 @@ public final class App {
 
         for (ObjectNode commandNode : commands) {
             String username = commandNode.get("username").asText();
+            String timestamp = commandNode.get("timestamp").asText();
+            AppState.checkMilestoneNotifications(timestamp);
 
             if (!userExists(username)) {
                 outputs.add(buildUserNotFoundError(commandNode));
@@ -156,6 +160,28 @@ public final class App {
         return null;
     }
 
+    public static ObjectNode getManagerByUsername(String username) {
+        for (ObjectNode user : users) {
+            if (user.get("username").asText().equals(username)) {
+                if (user.has("role") && user.get("role").asText().equals("MANAGER")) {
+                    return user;
+                }
+                break;
+            }
+        }
+        return null;
+    }
+
+    public static List<ObjectNode> getAllDevelopers() {
+        List<ObjectNode> developers = new ArrayList<>();
+        for (ObjectNode user : users) {
+            if (user.has("role") && user.get("role").asText().equals("DEVELOPER")) {
+                developers.add(user);
+            }
+        }
+        return developers;
+    }
+
     private static ObjectNode buildUserNotFoundError(ObjectNode commandNode) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode error = mapper.createObjectNode();
@@ -170,5 +196,13 @@ public final class App {
 
     public static void addNotification(String username, String timestamp, String message) {
         notifications.computeIfAbsent(username, k -> new ArrayList<>()).add(message);
+    }
+
+    public static List<String> getNotifications(String username) {
+        return notifications.getOrDefault(username, new ArrayList<>());
+    }
+
+    public static void clearNotifications(String username) {
+        notifications.remove(username);
     }
 }

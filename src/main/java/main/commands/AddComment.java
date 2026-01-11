@@ -20,7 +20,6 @@ public class AddComment implements Command {
         int ticketId = node.get("ticketID").asInt();
         String comment = node.get("comment").asText();
         String timestamp = node.get("timestamp").asText();
-
         Ticket ticket = AppState.getTicketById(ticketId);
         if (ticket == null) {
             return;
@@ -93,6 +92,7 @@ public class AddComment implements Command {
         commentNode.put("author", username);
         commentNode.put("content", comment);
         commentNode.put("createdAt", timestamp);
+
         ticket.addComment(commentNode);
     }
 

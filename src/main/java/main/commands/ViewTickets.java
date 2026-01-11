@@ -54,7 +54,7 @@ public class ViewTickets implements Command {
                         if (milestone == null) {
                             return false;
                         }
-                        return milestone.getAssignedDevs().contains(username) 
+                        return milestone.getAssignedDevs().contains(username)
                                 && t.getStatus().equals("OPEN");
                     })
                     .collect(Collectors.toList());
@@ -69,27 +69,27 @@ public class ViewTickets implements Command {
         ArrayNode ticketsArray = mapper.createArrayNode();
         for (Ticket t : filtered) {
             ObjectNode ticketJson = t.toViewJson(mapper);
-            
+
             String milestoneName = AppState.getMilestoneNameByTicket(t.getId());
             if (milestoneName != null) {
                 Milestone milestone = AppState.getMilestoneByName(milestoneName);
                 if (milestone != null && !milestone.isBlocked()) {
                     BusinessPriority escalated = determineEscalatedPriorityLevel(
-                        ticketJson.get("businessPriority").asText(),
-                        milestone,
-                        currentDate
+                            ticketJson.get("businessPriority").asText(),
+                            milestone,
+                            currentDate
                     );
                     ticketJson.put("businessPriority", escalated.name());
                 }
             }
-            
+
             ticketsArray.add(ticketJson);
         }
 
         out.set("tickets", ticketsArray);
         App.addOutput(out);
     }
-    
+
     private BusinessPriority determineEscalatedPriorityLevel(
             String currentPriority,
             Milestone milestone,
@@ -97,15 +97,15 @@ public class ViewTickets implements Command {
     ) {
         BusinessPriority priority = BusinessPriority.valueOf(currentPriority);
         long daysSinceMilestoneCreation = ChronoUnit.DAYS.between(
-            milestone.getCreatedAt(),
-            currentDate
+                milestone.getCreatedAt(),
+                currentDate
         );
-        
+
         long daysUntilDue = ChronoUnit.DAYS.between(currentDate, milestone.getDueDate());
         if (daysUntilDue == 1) {
             return BusinessPriority.CRITICAL;
         }
-        
+
         if (daysSinceMilestoneCreation >= 3) {
             return switch (priority) {
                 case LOW -> BusinessPriority.MEDIUM;
@@ -114,7 +114,7 @@ public class ViewTickets implements Command {
                 case CRITICAL -> BusinessPriority.CRITICAL;
             };
         }
-        
+
         return priority;
     }
 
