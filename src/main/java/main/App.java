@@ -37,6 +37,8 @@ public final class App {
     public static void run(final String inputPath, final String outputPath) {
         outputs.clear();
         users.clear();
+        notifications.clear();
+        AppState.reset();
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -79,11 +81,12 @@ public final class App {
             try {
                 Command command = CommandFactory.createCommand(commandNode);
                 command.execute();
-                
+
                 if (AppState.investorsLost()) {
                     break;
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
 

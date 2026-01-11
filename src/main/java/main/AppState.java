@@ -115,4 +115,12 @@ public final class AppState {
     public static com.fasterxml.jackson.databind.node.ObjectNode getDeveloperByUsername(String username) {
         return App.getDeveloperByUsername(username);
     }
+
+    public static void reset() {
+        tickets.clear();
+        milestones.clear();
+        nextTicketId = 0;
+        investorsLost = false;
+        testingPhaseStart = null;
+    }
 }

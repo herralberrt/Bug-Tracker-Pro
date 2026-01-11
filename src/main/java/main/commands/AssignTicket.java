@@ -44,10 +44,10 @@ public class AssignTicket implements Command {
         }
 
         ExpertiseArea devExpertiseArea = ExpertiseArea.valueOf(
-            developer.get("expertiseArea").asText()
+                developer.get("expertiseArea").asText()
         );
         Seniority devSeniority = Seniority.valueOf(
-            developer.get("seniority").asText()
+                developer.get("seniority").asText()
         );
 
         ObjectNode error = mapper.createObjectNode();
@@ -57,17 +57,17 @@ public class AssignTicket implements Command {
 
         if (!validateDeveloperExpertiseAreaAccess(devExpertiseArea, ticket.getExpertiseArea())) {
             List<String> requiredAreas = buildRequiredExpertiseAreasList(
-                ticket.getExpertiseArea()
+                    ticket.getExpertiseArea()
             );
             error.put(
-                "error",
-                String.format(
-                    "Developer %s cannot assign ticket %d due to expertise area. Required: %s; Current: %s.",
-                    username,
-                    ticketID,
-                    String.join(", ", requiredAreas),
-                    devExpertiseArea.name()
-                )
+                    "error",
+                    String.format(
+                            "Developer %s cannot assign ticket %d due to expertise area. Required: %s; Current: %s.",
+                            username,
+                            ticketID,
+                            String.join(", ", requiredAreas),
+                            devExpertiseArea.name()
+                    )
             );
             App.addOutput(error);
             return;
@@ -75,18 +75,18 @@ public class AssignTicket implements Command {
 
         if (!validateDeveloperSeniorityLevelAccess(devSeniority, ticket.getBusinessPriority(), ticket.getType())) {
             List<String> requiredLevels = buildRequiredSeniorityLevelsList(
-                ticket.getBusinessPriority(),
-                ticket.getType()
+                    ticket.getBusinessPriority(),
+                    ticket.getType()
             );
             error.put(
-                "error",
-                String.format(
-                    "Developer %s cannot assign ticket %d due to seniority level. Required: %s; Current: %s.",
-                    username,
-                    ticketID,
-                    String.join(", ", requiredLevels),
-                    devSeniority.name()
-                )
+                    "error",
+                    String.format(
+                            "Developer %s cannot assign ticket %d due to seniority level. Required: %s; Current: %s.",
+                            username,
+                            ticketID,
+                            String.join(", ", requiredLevels),
+                            devSeniority.name()
+                    )
             );
             App.addOutput(error);
             return;
@@ -104,12 +104,12 @@ public class AssignTicket implements Command {
             if (milestone != null) {
                 if (!milestone.getAssignedDevs().contains(username)) {
                     error.put(
-                        "error",
-                        String.format(
-                            "Developer %s is not assigned to milestone %s.",
-                            username,
-                            milestoneName
-                        )
+                            "error",
+                            String.format(
+                                    "Developer %s is not assigned to milestone %s.",
+                                    username,
+                                    milestoneName
+                            )
                     );
                     App.addOutput(error);
                     return;
@@ -117,12 +117,12 @@ public class AssignTicket implements Command {
 
                 if (milestone.isBlocked()) {
                     error.put(
-                        "error",
-                        String.format(
-                            "Cannot assign ticket %d from blocked milestone %s.",
-                            ticketID,
-                            milestoneName
-                        )
+                            "error",
+                            String.format(
+                                    "Cannot assign ticket %d from blocked milestone %s.",
+                                    ticketID,
+                                    milestoneName
+                            )
                     );
                     App.addOutput(error);
                     return;
@@ -141,15 +141,15 @@ public class AssignTicket implements Command {
     ) {
         return switch (devArea) {
             case FULLSTACK -> true;
-            case FRONTEND -> 
-                ticketArea == ExpertiseArea.FRONTEND || 
-                ticketArea == ExpertiseArea.DESIGN;
-            case BACKEND -> 
-                ticketArea == ExpertiseArea.BACKEND || 
-                ticketArea == ExpertiseArea.DB;
-            case DESIGN -> 
-                ticketArea == ExpertiseArea.DESIGN || 
-                ticketArea == ExpertiseArea.FRONTEND;
+            case FRONTEND ->
+                    ticketArea == ExpertiseArea.FRONTEND ||
+                            ticketArea == ExpertiseArea.DESIGN;
+            case BACKEND ->
+                    ticketArea == ExpertiseArea.BACKEND ||
+                            ticketArea == ExpertiseArea.DB;
+            case DESIGN ->
+                    ticketArea == ExpertiseArea.DESIGN ||
+                            ticketArea == ExpertiseArea.FRONTEND;
             case DB -> ticketArea == ExpertiseArea.DB;
             case DEVOPS -> ticketArea == ExpertiseArea.DEVOPS;
         };
@@ -186,22 +186,22 @@ public class AssignTicket implements Command {
         if (seniority == Seniority.SENIOR) {
             return true;
         }
-        
+
         if (seniority == Seniority.JUNIOR) {
             if (type == Type.FEATURE_REQUEST) {
                 return false;
             }
-            return priority == BusinessPriority.LOW || 
-                   priority == BusinessPriority.MEDIUM;
+            return priority == BusinessPriority.LOW ||
+                    priority == BusinessPriority.MEDIUM;
         }
-        
+
         if (seniority == Seniority.MID) {
             if (priority == BusinessPriority.CRITICAL) {
                 return false;
             }
             return true;
         }
-        
+
         return false;
     }
 
@@ -210,7 +210,7 @@ public class AssignTicket implements Command {
             Type type
     ) {
         List<String> levels = new ArrayList<>();
-        
+
         if (priority == BusinessPriority.CRITICAL || type == Type.FEATURE_REQUEST) {
             if (priority == BusinessPriority.CRITICAL) {
                 levels.add("SENIOR");
@@ -226,7 +226,7 @@ public class AssignTicket implements Command {
             levels.add("MID");
             levels.add("SENIOR");
         }
-        
+
         levels.sort(String::compareTo);
         return levels;
     }

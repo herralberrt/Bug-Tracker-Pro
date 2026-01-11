@@ -129,7 +129,12 @@ public class Bug extends Ticket {
         node.put("createdAt", createdAt.toString());
         node.put("assignedAt", assignedAt == null ? "" : assignedAt.toString());
         node.put("reportedBy", reportedBy);
-        node.set("comments", mapper.createArrayNode());
+
+        var commentsArray = mapper.createArrayNode();
+        for (var comment : comments) {
+            commentsArray.add(comment);
+        }
+        node.set("comments", commentsArray);
         return node;
     }
 }

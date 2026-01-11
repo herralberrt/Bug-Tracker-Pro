@@ -17,7 +17,7 @@ public final class Developer extends Utilizator implements Observer {
     private final List<String> notifications = new ArrayList<>();
 
     public Developer(String username, String email, LocalDate hireDate,
-                    Seniority seniority, ExpertiseArea expertiseArea) {
+                     Seniority seniority, ExpertiseArea expertiseArea) {
 
         super(username, email);
         this.hireDate = hireDate;

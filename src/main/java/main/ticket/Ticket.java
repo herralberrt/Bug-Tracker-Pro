@@ -1,10 +1,13 @@
 package main.ticket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.enums.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class Ticket {
 
@@ -20,6 +23,7 @@ public abstract class Ticket {
     protected LocalDate solvedAt;
     protected String assignedTo;
     protected LocalDate assignedAt;
+    protected final List<ObjectNode> comments;
 
     protected Ticket(
             int id,
@@ -45,6 +49,7 @@ public abstract class Ticket {
         this.solvedAt = solvedAt;
         this.assignedTo = "";
         this.assignedAt = null;
+        this.comments = new ArrayList<>();
     }
 
     public ObjectNode toViewJson(ObjectMapper mapper) {
@@ -60,7 +65,12 @@ public abstract class Ticket {
         node.put("solvedAt", solvedAt == null ? "" : solvedAt.toString());
         node.put("assignedTo", assignedTo == null ? "" : assignedTo);
         node.put("reportedBy", reportedBy);
-        node.set("comments", mapper.createArrayNode());
+
+        ArrayNode commentsArray = mapper.createArrayNode();
+        for (ObjectNode comment : comments) {
+            commentsArray.add(comment);
+        }
+        node.set("comments", commentsArray);
 
         return node;
     }
@@ -82,40 +92,59 @@ public abstract class Ticket {
     public String getStatus() {
         return status.name();
     }
-    
+
     public TicketStatus getStatusEnum() {
         return status;
     }
-    
+
     public void setStatus(TicketStatus status) {
         this.status = status;
     }
-    
+
     public String getAssignedTo() {
         return assignedTo;
     }
-    
+
     public void setAssignedTo(String assignedTo) {
         this.assignedTo = assignedTo;
     }
-    
+
     public LocalDate getAssignedAt() {
         return assignedAt;
     }
-    
+
     public void setAssignedAt(LocalDate assignedAt) {
         this.assignedAt = assignedAt;
     }
-    
+
     public BusinessPriority getBusinessPriority() {
         return businessPriority;
     }
-    
+
     public ExpertiseArea getExpertiseArea() {
         return expertiseArea;
     }
-    
+
     public Type getType() {
         return type;
+    }
+
+    public void addComment(ObjectNode comment) {
+        comments.add(comment);
+    }
+
+    public boolean removeLastCommentByUser(String username) {
+        for (int i = comments.size() - 1; i >= 0; i--) {
+            ObjectNode comment = comments.get(i);
+            if (comment.get("author").asText().equals(username)) {
+                comments.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnonymous() {
+        return reportedBy == null || reportedBy.isEmpty();
     }
 }
