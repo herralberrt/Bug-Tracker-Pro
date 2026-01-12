@@ -121,9 +121,7 @@ public class AssignTicket implements Command {
                             String.format(
                                     "Cannot assign ticket %d from blocked milestone %s.",
                                     ticketID,
-                                    milestoneName
-                            )
-                    );
+                                    milestoneName));
                     App.addOutput(error);
                     return;
                 }
@@ -193,10 +191,7 @@ public class AssignTicket implements Command {
     }
 
     private boolean validateDeveloperSeniorityLevelAccess(
-            Seniority seniority,
-            BusinessPriority priority,
-            Type type
-    ) {
+            Seniority seniority, BusinessPriority priority, Type type) {
         if (seniority == Seniority.SENIOR) {
             return true;
         }

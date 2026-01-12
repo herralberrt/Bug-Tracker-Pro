@@ -38,11 +38,9 @@ public class ViewAssignedTickets implements Command {
                         Comparator
                                 .comparing(
                                         (Ticket t) -> calculatePriorityNumericalValue(t.getBusinessPriority()),
-                                        Comparator.reverseOrder()
-                                )
+                                        Comparator.reverseOrder())
                                 .thenComparing(Ticket::getCreatedAt)
-                                .thenComparing(Ticket::getId)
-                )
+                                .thenComparing(Ticket::getId))
                 .collect(Collectors.toList());
 
         ArrayNode ticketsArray = mapper.createArrayNode();

@@ -7,10 +7,8 @@ public final class NotificationFactory {
     private NotificationFactory() {
     }
 
-    public static Notification milestoneCreated(
-            String milestoneName,
-            LocalDate dueDate
-    ) {
+    public static Notification milestoneCreated(String milestoneName,
+            LocalDate dueDate) {
         return new Notification("New milestone " + milestoneName +
                 " has been created with due date " + dueDate + ".");
     }

@@ -39,7 +39,6 @@ public class Bug extends Ticket {
         private String reportedBy;
         private LocalDate createdAt;
         private LocalDate solvedAt;
-
         private String expectedBehavior;
         private String actualBehavior;
         private Frequency frequency;
@@ -115,6 +114,14 @@ public class Bug extends Ticket {
         public Bug build() {
             return new Bug(this);
         }
+    }
+
+    public Frequency getFrequency() {
+        return frequency;
+    }
+
+    public Severity getSeverity() {
+        return severity;
     }
 
     @Override

@@ -85,6 +85,14 @@ public class FeatureRequest extends Ticket {
         }
     }
 
+    public BusinessValue getBusinessValue() {
+        return businessValue;
+    }
+
+    public CustomerDemand getCustomerDemand() {
+        return customerDemand;
+    }
+
     @Override
     public ObjectNode toJson(ObjectMapper mapper) {
         ObjectNode node = mapper.createObjectNode();

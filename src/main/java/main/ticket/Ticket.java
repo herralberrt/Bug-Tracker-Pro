@@ -26,18 +26,9 @@ public abstract class Ticket {
     protected final List<ObjectNode> comments;
     protected final List<ObjectNode> history;
 
-    protected Ticket(
-            int id,
-            Type type,
-            String title,
-            BusinessPriority businessPriority,
-            TicketStatus status,
-            ExpertiseArea expertiseArea,
-            String description,
-            String reportedBy,
-            LocalDate createdAt,
-            LocalDate solvedAt
-    ) {
+    protected Ticket(int id, Type type, String title, BusinessPriority businessPriority,
+                     TicketStatus status, ExpertiseArea expertiseArea, String description,
+                     String reportedBy, LocalDate createdAt, LocalDate solvedAt) {
         this.id = id;
         this.type = type;
         this.title = title;

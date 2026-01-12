@@ -109,6 +109,14 @@ public class UiFeedback extends Ticket {
         }
     }
 
+    public BusinessValue getBusinessValue() {
+        return businessValue;
+    }
+
+    public int getUsabilityScore() {
+        return usabilityScore;
+    }
+
     @Override
     public ObjectNode toJson(ObjectMapper mapper) {
         ObjectNode node = mapper.createObjectNode();

@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public final class CommandFactory {
 
-    private CommandFactory() {
-
-    }
+    private CommandFactory() {}
 
     public static Command createCommand(ObjectNode node) {
         String command = node.get("command").asText();
@@ -41,6 +39,16 @@ public final class CommandFactory {
             return new Search(node);
         } else if (command.equals("viewNotifications")) {
             return new ViewNotifications(node);
+        } else if (command.equals("generateCustomerImpactReport")) {
+            return new GenerateCustomerImpactReport(node);
+        } else if (command.equals("generateTicketRiskReport")) {
+            return new GenerateTicketRiskReport(node);
+        } else if (command.equals("generateResolutionEfficiencyReport")) {
+            return new GenerateResolutionEfficiencyReport(node);
+        } else if (command.equals("appStabilityReport")) {
+            return new AppStabilityReport(node);
+        } else if (command.equals("generatePerformanceReport")) {
+            return new GeneratePerformanceReport(node);
         } else {
             throw new IllegalArgumentException("Unknown command");
         }

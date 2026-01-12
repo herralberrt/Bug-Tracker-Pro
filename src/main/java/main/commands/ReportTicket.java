@@ -72,5 +72,7 @@ public class ReportTicket implements Command {
     }
 
     @Override
-    public void undo() {}
+    public void undo() {
+
+    }
 }

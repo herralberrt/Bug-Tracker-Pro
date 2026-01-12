@@ -90,16 +90,12 @@ public class ViewTickets implements Command {
         App.addOutput(out);
     }
 
-    private BusinessPriority determineEscalatedPriorityLevel(
-            String currentPriority,
-            Milestone milestone,
-            LocalDate currentDate
-    ) {
+    private BusinessPriority determineEscalatedPriorityLevel(String currentPriority,
+            Milestone milestone, LocalDate currentDate) {
+
         BusinessPriority priority = BusinessPriority.valueOf(currentPriority);
         long daysSinceMilestoneCreation = ChronoUnit.DAYS.between(
-                milestone.getCreatedAt(),
-                currentDate
-        );
+                milestone.getCreatedAt(), currentDate);
 
         long daysUntilDue = ChronoUnit.DAYS.between(currentDate, milestone.getDueDate());
         if (daysUntilDue == 1) {
@@ -114,10 +110,11 @@ public class ViewTickets implements Command {
                 case CRITICAL -> BusinessPriority.CRITICAL;
             };
         }
-
         return priority;
     }
 
     @Override
-    public void undo() {}
+    public void undo() {
+
+    }
 }
