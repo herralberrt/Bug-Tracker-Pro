@@ -3,15 +3,13 @@ package main;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
+import java.util.List;
+import java.io.File;
 import main.commands.Command;
 import main.commands.CommandFactory;
-
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
 
 public final class App {
 
@@ -20,15 +18,15 @@ public final class App {
     }
 
     private static final String INPUT_USERS_FIELD = "input/database/users.json";
-
     private static final ObjectWriter WRITER =
             new ObjectMapper().writer().withDefaultPrettyPrinter();
-
     private static final List<ObjectNode> users = new ArrayList<>();
-    private static final List<ObjectNode> outputs = new ArrayList<>();
-    private static final Map<String, List<String>> notifications = new HashMap<>();
+    private static final List<ObjectNode> OUTPUTS = new ArrayList<>();
 
-    public static void main(String[] args) {
+    /**
+     * The main entry point for the application
+     */
+    public static void main(final String[] args) {
         if (args.length < 2) {
             System.err.println("Usage: App <inputPath> <outputPath>");
             return;
@@ -36,22 +34,20 @@ public final class App {
         run(args[0], args[1]);
     }
 
+    /**
+     * Runs the application with the given input and output paths
+     */
     public static void run(final String inputPath, final String outputPath) {
-        outputs.clear();
+        OUTPUTS.clear();
         users.clear();
-        notifications.clear();
         AppState.reset();
 
         ObjectMapper mapper = new ObjectMapper();
 
         try {
-            users.addAll(
-                    mapper.readValue(
-                            new File(INPUT_USERS_FIELD),
+            users.addAll(mapper.readValue(new File(INPUT_USERS_FIELD),
                             mapper.getTypeFactory()
-                                    .constructCollectionType(List.class, ObjectNode.class)
-                    )
-            );
+                                    .constructCollectionType(List.class, ObjectNode.class)));
         } catch (IOException e) {
             System.out.println("Error reading users file");
         }
@@ -61,8 +57,7 @@ public final class App {
             commands = mapper.readValue(
                     new File(inputPath),
                     mapper.getTypeFactory()
-                            .constructCollectionType(List.class, ObjectNode.class)
-            );
+                            .constructCollectionType(List.class, ObjectNode.class));
         } catch (IOException e) {
             System.out.println("Error reading commands file");
             return;
@@ -75,20 +70,16 @@ public final class App {
         for (ObjectNode commandNode : commands) {
             String username = commandNode.get("username").asText();
             String timestamp = commandNode.get("timestamp").asText();
-            AppState.checkMilestoneNotifications(timestamp);
+            AppState.checkMilestone(timestamp);
 
             if (!userExists(username)) {
-                outputs.add(buildUserNotFoundError(commandNode));
+                OUTPUTS.add(buildUserNotFoundError(commandNode));
                 continue;
             }
 
             try {
-                Command command = CommandFactory.createCommand(commandNode);
+                Command command = CommandFactory.INSTANCE.createCommand(commandNode);
                 command.execute();
-
-                if (AppState.investorsLost()) {
-                    break;
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -99,17 +90,23 @@ public final class App {
             if (outputFile.getParentFile() != null) {
                 outputFile.getParentFile().mkdirs();
             }
-            WRITER.writeValue(outputFile, outputs);
+            WRITER.writeValue(outputFile, OUTPUTS);
         } catch (IOException e) {
             System.out.println("Error writing output file");
         }
     }
 
-    public static void addOutput(ObjectNode out) {
-        outputs.add(out);
+    /**
+     * Adds an output node to the output list
+     */
+    public static void addOutput(final ObjectNode out) {
+        OUTPUTS.add(out);
     }
 
-    public static String getUserRole(String username) {
+    /**
+     * Returns the role of the user with the given username
+     */
+    public static String getUserRole(final String username) {
         for (ObjectNode user : users) {
             if (user.get("username").asText().equals(username)) {
                 if (user.has("role")) {
@@ -121,7 +118,10 @@ public final class App {
         return "";
     }
 
-    private static boolean userExists(String username) {
+    /**
+     * Checks if a user exists with the given username
+     */
+    private static boolean userExists(final String username) {
         for (ObjectNode user : users) {
             if (user.get("username").asText().equals(username)) {
                 return true;
@@ -130,7 +130,10 @@ public final class App {
         return false;
     }
 
-    public static boolean userExistsInternal(String username) {
+    /**
+     * Checks internally if a user exists with the given username
+     */
+    public static boolean userExistsInternal(final String username) {
         for (ObjectNode user : users) {
             if (user.get("username").asText().equals(username)) {
                 return true;
@@ -139,16 +142,10 @@ public final class App {
         return false;
     }
 
-    public static boolean userExistsPublic(String username) {
-        for (ObjectNode user : users) {
-            if (user.get("username").asText().equals(username)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static ObjectNode getDeveloperByUsername(String username) {
+    /**
+     * Returns the developer user node for the given username
+     */
+    public static ObjectNode getDeveloperByUsername(final String username) {
         for (ObjectNode user : users) {
             if (user.get("username").asText().equals(username)) {
                 if (user.has("role") && user.get("role").asText().equals("DEVELOPER")) {
@@ -160,7 +157,10 @@ public final class App {
         return null;
     }
 
-    public static ObjectNode getManagerByUsername(String username) {
+    /**
+     * Returns the manager user node for the given username
+     */
+    public static ObjectNode getManagerByUsername(final String username) {
         for (ObjectNode user : users) {
             if (user.get("username").asText().equals(username)) {
                 if (user.has("role") && user.get("role").asText().equals("MANAGER")) {
@@ -172,37 +172,30 @@ public final class App {
         return null;
     }
 
-    public static List<ObjectNode> getAllDevelopers() {
-        List<ObjectNode> developers = new ArrayList<>();
-        for (ObjectNode user : users) {
-            if (user.has("role") && user.get("role").asText().equals("DEVELOPER")) {
-                developers.add(user);
-            }
-        }
-        return developers;
-    }
-
-    private static ObjectNode buildUserNotFoundError(ObjectNode commandNode) {
+    /**
+     * Builds an error node for a user not found
+     */
+    private static ObjectNode buildUserNotFoundError(final ObjectNode commandNode) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode error = mapper.createObjectNode();
 
         error.put("command", commandNode.get("command").asText());
         error.put("username", commandNode.get("username").asText());
         error.put("timestamp", commandNode.get("timestamp").asText());
-        error.put("error", "The user " + commandNode.get("username").asText() + " does not exist.");
-
+        error.put("error", "The user "
+                + commandNode.get("username").asText() + " does not exist.");
         return error;
     }
 
-    public static void addNotification(String username, String timestamp, String message) {
-        notifications.computeIfAbsent(username, k -> new ArrayList<>()).add(message);
-    }
-
-    public static List<String> getNotifications(String username) {
-        return notifications.getOrDefault(username, new ArrayList<>());
-    }
-
-    public static void clearNotifications(String username) {
-        notifications.remove(username);
+    /**
+     * Adds a notification for the given user
+     */
+    public static void addNotification(final String username,
+                                       final String timestamp,
+                                       final String message) {
+        main.utiliz.Developer dev = main.AppState.getDeveloperInstanceByUsername(username);
+        if (dev != null) {
+            dev.update(message);
+        }
     }
 }

@@ -2,47 +2,61 @@ package main.commands;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import main.App;
-import main.AppState;
-import main.ticket.Bug;
-import main.ticket.FeatureRequest;
-import main.ticket.Ticket;
-import main.ticket.UiFeedback;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import main.ticket.FeatureRequest;
+import main.ticket.Ticket;
+import main.ticket.UiFeedback;
+import main.App;
+import main.AppState;
+import main.ticket.Bug;;
 
-public class GenerateCustomerImpactReport implements Command {
+public final class GenerateCustomerImpactReport implements Command {
+    private static final double BUG_MAX_VALUE = 48.0;
+    private static final double MAXI = 100;
+    private static final int PRIORITY_HIGH = 3;
+    private static final int PRIORITY_CRITICAL = 4;
+    private static final int SEVERITY_SEVERE = 3;
+    private static final int BUSINESS_VALUE_M = 3;
+    private static final int BUSINESS_VALUE_L = 6;
+    private static final int BUSINESS_VALUE_XL = 10;
+    private static final int CUSTOMER_DEMAND_MEDIUM = 3;
+    private static final int CUSTOMER_DEMAND_HIGH = 6;
+    private static final int CUSTOMER_DEMAND_VERY_HIGH = 10;
 
     private final ObjectNode node;
 
-    public GenerateCustomerImpactReport(ObjectNode node) {
+    /**
+     * Constructs a GenerateCustomerImpactReport command with the given node
+     */
+    public GenerateCustomerImpactReport(final ObjectNode node) {
         this.node = node;
     }
 
+    /**
+     * Executes the generate customer impact report command for the specified user
+     */
     @Override
     public void execute() {
         ObjectMapper mapper = new ObjectMapper();
         String username = node.get("username").asText();
         String timestamp = node.get("timestamp").asText();
-
         ObjectNode result = mapper.createObjectNode();
         result.put("command", "generateCustomerImpactReport");
         result.put("username", username);
         result.put("timestamp", timestamp);
 
-        // Colectează toate tichetele OPEN și IN_PROGRESS
-        List<Ticket> eligibleTickets = new ArrayList<>();
+        List<Ticket> okTick = new ArrayList<>();
         for (Ticket ticket : AppState.getTickets()) {
             String status = ticket.getStatus();
             if (status.equals("OPEN") || status.equals("IN_PROGRESS")) {
-                eligibleTickets.add(ticket);
+                okTick.add(ticket);
             }
         }
 
-        int totalTickets = eligibleTickets.size();
+        int totalTickets = okTick.size();
         Map<String, Integer> ticketsByType = new HashMap<>();
         ticketsByType.put("BUG", 0);
         ticketsByType.put("FEATURE_REQUEST", 0);
@@ -54,23 +68,22 @@ public class GenerateCustomerImpactReport implements Command {
         ticketsByPriority.put("HIGH", 0);
         ticketsByPriority.put("CRITICAL", 0);
 
-        for (Ticket ticket : eligibleTickets) {
+        for (Ticket ticket : okTick) {
             String type = ticket.getType().toString();
             ticketsByType.put(type, ticketsByType.get(type) + 1);
-
             String priority = ticket.getBusinessPriority().toString();
             ticketsByPriority.put(priority, ticketsByPriority.get(priority) + 1);
         }
 
-        Map<String, List<Double>> impactScores = new HashMap<>();
-        impactScores.put("BUG", new ArrayList<>());
-        impactScores.put("FEATURE_REQUEST", new ArrayList<>());
-        impactScores.put("UI_FEEDBACK", new ArrayList<>());
+        Map<String, List<Double>> imScores = new HashMap<>();
+        imScores.put("BUG", new ArrayList<>());
+        imScores.put("FEATURE_REQUEST", new ArrayList<>());
+        imScores.put("UI_FEEDBACK", new ArrayList<>());
 
-        for (Ticket ticket : eligibleTickets) {
+        for (Ticket ticket : okTick) {
             String type = ticket.getType().toString();
-            double baseScore = 0.0;
-            double maxValue = 0.0;
+            double scBaza = 0.0;
+            double maxi = 0.0;
 
             if (type.equals("BUG")) {
                 Bug bug = (Bug) ticket;
@@ -78,31 +91,31 @@ public class GenerateCustomerImpactReport implements Command {
                 int businessPriority = getPriorityValue(bug.getBusinessPriority().toString());
                 int severityFactor = getSeverityValue(bug.getSeverity().toString());
 
-                baseScore = frequency * businessPriority * severityFactor;
-                maxValue = 48.0;
+                scBaza = frequency * businessPriority * severityFactor;
+                maxi = BUG_MAX_VALUE;
             } else if (type.equals("FEATURE_REQUEST")) {
                 FeatureRequest fr = (FeatureRequest) ticket;
                 int businessValue = getBusinessValue(fr.getBusinessValue().toString());
                 int customerDemand = getCustomerDemand(fr.getCustomerDemand().toString());
+                scBaza = businessValue * customerDemand;
+                maxi = MAXI;
 
-                baseScore = businessValue * customerDemand;
-                maxValue = 100.0;
             } else if (type.equals("UI_FEEDBACK")) {
                 UiFeedback ui = (UiFeedback) ticket;
                 int businessValue = getBusinessValue(ui.getBusinessValue().toString());
                 int usabilityScore = ui.getUsabilityScore();
-
-                baseScore = businessValue * usabilityScore;
-                maxValue = 100.0;
+                scBaza = businessValue * usabilityScore;
+                maxi = MAXI;
             }
 
-            double normalizedScore = Math.min(100.0, (baseScore * 100.0) / maxValue);
-            impactScores.get(type).add(normalizedScore);
+            double normalizedScore = Math.min(MAXI,
+                    (scBaza * MAXI) / maxi);
+            imScores.get(type).add(normalizedScore);
         }
 
         Map<String, Double> customerImpactByType = new HashMap<>();
-        for (String type : impactScores.keySet()) {
-            List<Double> scores = impactScores.get(type);
+        for (String type : imScores.keySet()) {
+            List<Double> scores = imScores.get(type);
             double average = 0.0;
             if (!scores.isEmpty()) {
                 average = scores.stream()
@@ -110,7 +123,7 @@ public class GenerateCustomerImpactReport implements Command {
                         .average()
                         .orElse(0.0);
             }
-            customerImpactByType.put(type, Math.round(average * 100.0) / 100.0);
+            customerImpactByType.put(type, Math.round(average * MAXI) / MAXI);
         }
 
         ObjectNode reportNode = mapper.createObjectNode();
@@ -139,56 +152,98 @@ public class GenerateCustomerImpactReport implements Command {
         App.addOutput(result);
     }
 
+    /**
+     * Undoes the generate customer impact report command
+     */
     @Override
     public void undo() {
     }
 
-    private int getFrequencyValue(String frequency) {
+    /**
+     * Returns the value for a frequency string
+     */
+    private int getFrequencyValue(final String frequency) {
         switch (frequency) {
-            case "RARE": return 1;
-            case "OCCASIONAL": return 2;
-            case "FREQUENT": return 3;
-            case "ALWAYS": return 4;
-            default: return 0;
+            case "RARE":
+                return 1;
+            case "OCCASIONAL":
+                return 2;
+            case "FREQUENT":
+                return PRIORITY_HIGH;
+            case "ALWAYS":
+                return PRIORITY_CRITICAL;
+            default:
+                return 0;
         }
     }
 
-    private int getPriorityValue(String priority) {
+    /**
+     * Returns the value for a priority string
+     */
+    private int getPriorityValue(final String priority) {
         switch (priority) {
-            case "LOW": return 1;
-            case "MEDIUM": return 2;
-            case "HIGH": return 3;
-            case "CRITICAL": return 4;
-            default: return 0;
+            case "LOW":
+                return 1;
+            case "MEDIUM":
+                return 2;
+            case "HIGH":
+                return PRIORITY_HIGH;
+            case "CRITICAL":
+                return PRIORITY_CRITICAL;
+            default:
+                return 0;
         }
     }
 
-    private int getSeverityValue(String severity) {
+    /**
+     * Returns the value for a severity string
+     */
+    private int getSeverityValue(final String severity) {
         switch (severity) {
-            case "MINOR": return 1;
-            case "MODERATE": return 2;
-            case "SEVERE": return 3;
-            default: return 0;
+            case "MINOR":
+                return 1;
+            case "MODERATE":
+                return 2;
+            case "SEVERE":
+                return SEVERITY_SEVERE;
+            default:
+                return 0;
         }
     }
 
-    private int getBusinessValue(String businessValue) {
+    /**
+     * Returns the value for a business value string
+     */
+    private int getBusinessValue(final String businessValue) {
         switch (businessValue) {
-            case "S": return 1;
-            case "M": return 3;
-            case "L": return 6;
-            case "XL": return 10;
-            default: return 0;
+            case "S":
+                return 1;
+            case "M":
+                return BUSINESS_VALUE_M;
+            case "L":
+                return BUSINESS_VALUE_L;
+            case "XL":
+                return BUSINESS_VALUE_XL;
+            default:
+                return 0;
         }
     }
 
-    private int getCustomerDemand(String customerDemand) {
+    /**
+     * Returns the value for a customer demand string
+     */
+    private int getCustomerDemand(final String customerDemand) {
         switch (customerDemand) {
-            case "LOW": return 1;
-            case "MEDIUM": return 3;
-            case "HIGH": return 6;
-            case "VERY_HIGH": return 10;
-            default: return 0;
+            case "LOW":
+                return 1;
+            case "MEDIUM":
+                return CUSTOMER_DEMAND_MEDIUM;
+            case "HIGH":
+                return CUSTOMER_DEMAND_HIGH;
+            case "VERY_HIGH":
+                return CUSTOMER_DEMAND_VERY_HIGH;
+            default:
+                return 0;
         }
     }
 }

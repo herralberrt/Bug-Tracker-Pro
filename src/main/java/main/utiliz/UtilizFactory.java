@@ -1,22 +1,25 @@
 package main.utiliz;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.time.LocalDate;
 import main.enums.ExpertiseArea;
 import main.enums.Seniority;
 
 public final class UtilizFactory {
 
-    private UtilizFactory() {
+    protected UtilizFactory() {
+
     }
 
-    public static Utilizator create(ObjectNode node) {
-        String role = node.get("role").asText();
+    /**
+     * Creates a user instance from a JSON node
+     */
+    public static Utilizator create(final ObjectNode node) {
+        String rol = node.get("role").asText();
 
-        switch (role) {
+        switch (rol) {
             case "REPORTER":
                 return new Reporter(node.get("username").asText(), node.get("email").asText());
 
@@ -24,18 +27,15 @@ public final class UtilizFactory {
                 return new Developer(node.get("username").asText(), node.get("email").asText(),
                         LocalDate.parse(node.get("hireDate").asText()),
                         Seniority.valueOf(node.get("seniority").asText()),
-                        ExpertiseArea.valueOf(node.get("expertiseArea").asText())
-                );
+                        ExpertiseArea.valueOf(node.get("expertiseArea").asText()));
 
             case "MANAGER":
-                List<String> subs = new ArrayList<>();
-                node.get("subordinates").forEach(n -> subs.add(n.asText()));
+                List<String> subords = new ArrayList<>();
+                node.get("subordinates").forEach(n -> subords.add(n.asText()));
 
                 return new Manager(node.get("username").asText(), node.get("email").asText(),
-                        LocalDate.parse(node.get("hireDate").asText()), subs);
-
-            default:
-                throw new IllegalArgumentException("Unknown role: " + role);
+                        LocalDate.parse(node.get("hireDate").asText()), subords);
         }
+        return null;
     }
 }

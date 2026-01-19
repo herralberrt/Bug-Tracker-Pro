@@ -4,25 +4,32 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.App;
 import main.AppState;
-import main.enums.TicketStatus;
 import main.ticket.Ticket;
+import main.enums.TicketStatus;
 
-public class UndoAssignTicket implements Command {
+public final class UndoAssignTicket implements Command {
 
     private final ObjectNode node;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public UndoAssignTicket(ObjectNode node) {
+    /**
+     * Constructs an UndoAssignTicket command
+     */
+    public UndoAssignTicket(final ObjectNode node) {
         this.node = node;
     }
 
+    /**
+     * Executes the undo assign ticket command
+     */
     @Override
     public void execute() {
+
         String username = node.get("username").asText();
         int ticketID = node.get("ticketID").asInt();
         String timestamp = node.get("timestamp").asText();
-
         Ticket ticket = AppState.getTicketById(ticketID);
+
         if (ticket == null) {
             return;
         }
@@ -42,13 +49,18 @@ public class UndoAssignTicket implements Command {
         ticket.setAssignedAt(null);
         ticket.setStatus(TicketStatus.OPEN);
         ObjectNode historyEntry = mapper.createObjectNode();
+
         historyEntry.put("action", "DE-ASSIGNED");
         historyEntry.put("by", username);
         historyEntry.put("timestamp", timestamp);
         ticket.addHistoryEntry(historyEntry);
     }
 
+    /**
+     * Undoes the undo assign ticket command
+     */
     @Override
     public void undo() {
+
     }
 }

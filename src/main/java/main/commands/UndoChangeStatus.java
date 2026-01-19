@@ -4,25 +4,30 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.App;
 import main.AppState;
+import java.time.LocalDate;
 import main.enums.TicketStatus;
 import main.ticket.Ticket;
 
-import java.time.LocalDate;
-
-public class UndoChangeStatus implements Command {
+public final class UndoChangeStatus implements Command {
 
     private final ObjectNode node;
     private final String username;
     private final int ticketID;
     private final LocalDate timestamp;
 
-    public UndoChangeStatus(ObjectNode node) {
+    /**
+     * Constructs an UndoChangeStatus command
+     */
+    public UndoChangeStatus(final ObjectNode node) {
         this.node = node;
         this.username = node.get("username").asText();
         this.ticketID = node.get("ticketID").asInt();
         this.timestamp = LocalDate.parse(node.get("timestamp").asText());
     }
 
+    /**
+     * Executes the undo change status command
+     */
     @Override
     public void execute() {
         Ticket ticket = AppState.getTicketById(ticketID);
@@ -37,7 +42,8 @@ public class UndoChangeStatus implements Command {
             error.put("command", "undoChangeStatus");
             error.put("username", username);
             error.put("timestamp", timestamp.toString());
-            error.put("error", "Ticket " + ticketID + " is not assigned to developer " + username + ".");
+            error.put("error", "Ticket " + ticketID
+                    + " is not assigned to developer " + username + ".");
             App.addOutput(error);
             return;
         }
@@ -46,30 +52,34 @@ public class UndoChangeStatus implements Command {
             return;
         }
 
-        TicketStatus currentStatus = ticket.getStatusEnum();
-        TicketStatus previousStatus = null;
+        TicketStatus currStat = ticket.getStatusEnum();
+        TicketStatus lastStat = null;
 
-        if (currentStatus == TicketStatus.RESOLVED) {
-            previousStatus = TicketStatus.IN_PROGRESS;
+        if (currStat == TicketStatus.RESOLVED) {
+            lastStat = TicketStatus.IN_PROGRESS;
             ticket.setSolvedAt(null);
-        } else if (currentStatus == TicketStatus.CLOSED) {
-            previousStatus = TicketStatus.RESOLVED;
+        } else if (currStat == TicketStatus.CLOSED) {
+            lastStat = TicketStatus.RESOLVED;
         }
 
-        if (previousStatus != null) {
-            ticket.setStatus(previousStatus);
+        if (lastStat != null) {
+            ticket.setStatus(lastStat);
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode historyEntry = mapper.createObjectNode();
             historyEntry.put("action", "STATUS_CHANGED");
-            historyEntry.put("from", currentStatus.name());
-            historyEntry.put("to", previousStatus.name());
+            historyEntry.put("from", currStat.name());
+            historyEntry.put("to", lastStat.name());
             historyEntry.put("by", username);
             historyEntry.put("timestamp", timestamp.toString());
             ticket.addHistoryEntry(historyEntry);
         }
     }
 
+    /**
+     * Undoes the undo change status command
+     */
     @Override
     public void undo() {
+
     }
 }

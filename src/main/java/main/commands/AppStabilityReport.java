@@ -4,46 +4,84 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.App;
 import main.AppState;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import main.ticket.Bug;
 import main.ticket.FeatureRequest;
 import main.ticket.Ticket;
 import main.ticket.UiFeedback;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public final class AppStabilityReport implements Command {
+    private static final double BUG_RISK_MAX = 12.0;
+    private static final double BUG_IMPACT_MAX = 48.0;
+    private static final double FEATURE_RISK_MAX = 20.0;
+    private static final double FEATURE_IMPACT_MAX = 100.0;
+    private static final double UI_RISK_MAX = 100.0;
+    private static final double UI_IMPACT_MAX = 100.0;
+    private static final int USABILITY_SCORE_BASE = 11;
+    private static final double NORMALIZE_MAX = 100.0;
+    private static final double IMPACT_THRESHOLD = 50.0;
+    private static final double RISK_NEGLIGIBLE = 25.0;
+    private static final double RISK_MODERATE = 50.0;
+    private static final double RISK_SIGNIFICANT = 75.0;
+    private static final int FREQ_RARE = 1;
+    private static final int FREQ_OCCASIONAL = 2;
+    private static final int FREQ_FREQUENT = 3;
+    private static final int FREQ_ALWAYS = 4;
+    private static final int PRIORITY_LOW = 1;
+    private static final int PRIORITY_MEDIUM = 2;
+    private static final int PRIORITY_HIGH = 3;
+    private static final int PRIORITY_CRITICAL = 4;
+    private static final int SEVERITY_MINOR = 1;
+    private static final int SEVERITY_MODERATE = 2;
+    private static final int SEVERITY_SEVERE = 3;
+    private static final int BUSINESS_S = 1;
+    private static final int BUSINESS_M = 3;
+    private static final int BUSINESS_L = 6;
+    private static final int BUSINESS_XL = 10;
+    private static final int DEMAND_LOW = 1;
+    private static final int DEMAND_MEDIUM = 3;
+    private static final int DEMAND_HIGH = 6;
+    private static final int DEMAND_VERY_HIGH = 10;
+
     private final ObjectNode node;
 
+    /**
+     * Constructs an AppStabilityReport command
+     */
     public AppStabilityReport(final ObjectNode node) {
         this.node = node;
     }
 
+    /**
+     * Executes the command
+     */
     @Override
     public void execute() {
         ObjectMapper mapper = new ObjectMapper();
         String username = node.get("username").asText();
         String timestamp = node.get("timestamp").asText();
+        ObjectNode res = mapper.createObjectNode();
 
-        ObjectNode result = mapper.createObjectNode();
-        result.put("command", "appStabilityReport");
-        result.put("username", username);
-        result.put("timestamp", timestamp);
+        res.put("command", "appStabilityReport");
+        res.put("username", username);
+        res.put("timestamp", timestamp);
 
-        List<Ticket> eligibleTickets = new ArrayList<>();
+        List<Ticket> okTicket = new ArrayList<>();
         for (Ticket ticket : AppState.getTickets()) {
             String status = ticket.getStatus();
             if (status.equals("OPEN") || status.equals("IN_PROGRESS")) {
-                eligibleTickets.add(ticket);
+                okTicket.add(ticket);
             }
         }
 
-        int totalOpenTickets = eligibleTickets.size();
+        int totalOpenTickets = okTicket.size();
 
         if (totalOpenTickets == 0) {
             ObjectNode reportNode = mapper.createObjectNode();
+
             reportNode.put("totalOpenTickets", 0);
 
             ObjectNode typeNode = mapper.createObjectNode();
@@ -72,8 +110,8 @@ public final class AppStabilityReport implements Command {
             reportNode.set("impactByType", impactNode);
 
             reportNode.put("appStability", "STABLE");
-            result.set("report", reportNode);
-            App.addOutput(result);
+            res.set("report", reportNode);
+            App.addOutput(res);
             AppState.loseInvestors();
             return;
         }
@@ -89,7 +127,7 @@ public final class AppStabilityReport implements Command {
         ticketsByPriority.put("HIGH", 0);
         ticketsByPriority.put("CRITICAL", 0);
 
-        for (Ticket ticket : eligibleTickets) {
+        for (Ticket ticket : okTicket) {
             String type = ticket.getType().toString();
             ticketsByType.put(type, ticketsByType.get(type) + 1);
 
@@ -107,7 +145,7 @@ public final class AppStabilityReport implements Command {
         impactScores.put("FEATURE_REQUEST", new ArrayList<>());
         impactScores.put("UI_FEEDBACK", new ArrayList<>());
 
-        for (Ticket ticket : eligibleTickets) {
+        for (Ticket ticket : okTicket) {
             String type = ticket.getType().toString();
             double riskBaseScore = 0.0;
             double riskMaxValue = 0.0;
@@ -121,36 +159,38 @@ public final class AppStabilityReport implements Command {
                 int severityFactor = getSeverityValue(bug.getSeverity().toString());
 
                 riskBaseScore = frequency * severityFactor;
-                riskMaxValue = 12.0;
+                riskMaxValue = BUG_RISK_MAX;
 
                 impactBaseScore = frequency * businessPriority * severityFactor;
-                impactMaxValue = 48.0;
+                impactMaxValue = BUG_IMPACT_MAX;
             } else if (type.equals("FEATURE_REQUEST")) {
                 FeatureRequest fr = (FeatureRequest) ticket;
                 int businessValue = getBusinessValue(fr.getBusinessValue().toString());
                 int customerDemand = getCustomerDemand(fr.getCustomerDemand().toString());
 
                 riskBaseScore = businessValue + customerDemand;
-                riskMaxValue = 20.0;
+                riskMaxValue = FEATURE_RISK_MAX;
 
                 impactBaseScore = businessValue * customerDemand;
-                impactMaxValue = 100.0;
+                impactMaxValue = FEATURE_IMPACT_MAX;
             } else if (type.equals("UI_FEEDBACK")) {
                 UiFeedback ui = (UiFeedback) ticket;
                 int businessValue = getBusinessValue(ui.getBusinessValue().toString());
                 int usabilityScore = ui.getUsabilityScore();
 
-                riskBaseScore = (11 - usabilityScore) * businessValue;
-                riskMaxValue = 100.0;
+                riskBaseScore = (USABILITY_SCORE_BASE - usabilityScore) * businessValue;
+                riskMaxValue = UI_RISK_MAX;
 
                 impactBaseScore = businessValue * usabilityScore;
-                impactMaxValue = 100.0;
+                impactMaxValue = UI_IMPACT_MAX;
             }
 
-            double normalizedRisk = Math.min(100.0, (riskBaseScore * 100.0) / riskMaxValue);
+            double normalizedRisk = Math.min(NORMALIZE_MAX,
+                    (riskBaseScore * NORMALIZE_MAX) / riskMaxValue);
             riskScores.get(type).add(normalizedRisk);
 
-            double normalizedImpact = Math.min(100.0, (impactBaseScore * 100.0) / impactMaxValue);
+            double normalizedImpact = Math.min(NORMALIZE_MAX,
+                    (impactBaseScore * NORMALIZE_MAX) / impactMaxValue);
             impactScores.get(type).add(normalizedImpact);
         }
 
@@ -180,7 +220,7 @@ public final class AppStabilityReport implements Command {
             impactByType.put(type, Math.round(average * 100.0) / 100.0);
         }
 
-        String appStability = determineStability(riskByType, impactByType);
+        String appStability = detStab(riskByType, impactByType);
 
         ObjectNode reportNode = mapper.createObjectNode();
         reportNode.put("totalOpenTickets", totalOpenTickets);
@@ -211,107 +251,157 @@ public final class AppStabilityReport implements Command {
         reportNode.set("impactByType", impactNode);
 
         reportNode.put("appStability", appStability);
-        result.set("report", reportNode);
-        App.addOutput(result);
+        res.set("report", reportNode);
+        App.addOutput(res);
 
         if (appStability.equals("STABLE")) {
             AppState.loseInvestors();
         }
     }
 
+    /**
+     * Undo operation is not implemented for this command
+     */
     @Override
     public void undo() {
     }
 
-    private String determineStability(Map<String, String> riskByType, Map<String, Double> impactByType) {
-        boolean hasSignificant = false;
-        boolean allNegligible = true;
-        boolean allImpactBelow50 = true;
+    /**
+     * Determines the overall application stability based on risk and impact values
+     */
+    private String detStab(final Map<String, String> riskByType,
+                                      final Map<String, Double> impactByType) {
+
+        boolean signi = false;
+        boolean neg = true;
+        boolean below = true;
 
         for (String risk : riskByType.values()) {
             if (risk.equals("SIGNIFICANT") || risk.equals("MAJOR")) {
-                hasSignificant = true;
+                signi = true;
             }
             if (!risk.equals("NEGLIGIBLE")) {
-                allNegligible = false;
+                neg = false;
             }
         }
 
         for (Double impact : impactByType.values()) {
-            if (impact >= 50.0) {
-                allImpactBelow50 = false;
+            if (impact >= IMPACT_THRESHOLD) {
+                below = false;
+                break;
             }
         }
 
-        if (hasSignificant) {
+        if (signi) {
             return "UNSTABLE";
         }
 
-        if (allNegligible && allImpactBelow50) {
+        if (neg && below) {
             return "STABLE";
         }
-
         return "PARTIALLY STABLE";
     }
 
-    private String getRiskQualifier(double score) {
-        if (score < 25.0) {
+    /**
+     * Returns a risk qualifier based on the given risk score
+     */
+    private String getRiskQualifier(final double score) {
+        if (score < RISK_NEGLIGIBLE) {
             return "NEGLIGIBLE";
-        } else if (score < 50.0) {
+        } else if (score < RISK_MODERATE) {
             return "MODERATE";
-        } else if (score < 75.0) {
+        } else if (score < RISK_SIGNIFICANT) {
             return "SIGNIFICANT";
         } else {
             return "MAJOR";
         }
     }
 
-    private int getFrequencyValue(String frequency) {
+    /**
+     * Returns the value for a given bug frequency
+     */
+    private int getFrequencyValue(final String frequency) {
         switch (frequency) {
-            case "RARE": return 1;
-            case "OCCASIONAL": return 2;
-            case "FREQUENT": return 3;
-            case "ALWAYS": return 4;
-            default: return 0;
+            case "RARE":
+                return FREQ_RARE;
+            case "OCCASIONAL":
+                return FREQ_OCCASIONAL;
+            case "FREQUENT":
+                return FREQ_FREQUENT;
+            case "ALWAYS":
+                return FREQ_ALWAYS;
+            default:
+                return 0;
         }
     }
 
-    private int getPriorityValue(String priority) {
+    /**
+     * Returns the value for a given ticket priority
+     */
+    private int getPriorityValue(final String priority) {
         switch (priority) {
-            case "LOW": return 1;
-            case "MEDIUM": return 2;
-            case "HIGH": return 3;
-            case "CRITICAL": return 4;
-            default: return 0;
+            case "LOW":
+                return PRIORITY_LOW;
+            case "MEDIUM":
+                return PRIORITY_MEDIUM;
+            case "HIGH":
+                return PRIORITY_HIGH;
+            case "CRITICAL":
+                return PRIORITY_CRITICAL;
+            default:
+                return 0;
         }
     }
 
-    private int getSeverityValue(String severity) {
+    /**
+     * Returns the value for a given bug severity
+     */
+    private int getSeverityValue(final String severity) {
         switch (severity) {
-            case "MINOR": return 1;
-            case "MODERATE": return 2;
-            case "SEVERE": return 3;
-            default: return 0;
+            case "MINOR":
+                return SEVERITY_MINOR;
+            case "MODERATE":
+                return SEVERITY_MODERATE;
+            case "SEVERE":
+                return SEVERITY_SEVERE;
+            default:
+                return 0;
         }
     }
 
-    private int getBusinessValue(String businessValue) {
+    /**
+     * Returns the value for a given business value
+     */
+    private int getBusinessValue(final String businessValue) {
         switch (businessValue) {
-            case "S": return 1;
-            case "M": return 3;
-            case "L": return 6;
-            case "XL": return 10;
-            default: return 0;
+            case "S":
+                return BUSINESS_S;
+            case "M":
+                return BUSINESS_M;
+            case "L":
+                return BUSINESS_L;
+            case "XL":
+                return BUSINESS_XL;
+            default:
+                return 0;
         }
     }
 
-    private int getCustomerDemand(String customerDemand) {
+    /**
+     * Returns the value for a given customer demand
+     */
+    private int getCustomerDemand(final String customerDemand) {
         switch (customerDemand) {
-            case "LOW": return 1;
-            case "MEDIUM": return 3;
-            case "HIGH": return 6;
-            case "VERY_HIGH": return 10;
-            default: return 0;
+            case "LOW":
+                return DEMAND_LOW;
+            case "MEDIUM":
+                return DEMAND_MEDIUM;
+            case "HIGH":
+                return DEMAND_HIGH;
+            case "VERY_HIGH":
+                return DEMAND_VERY_HIGH;
+            default:
+                return 0;
         }
     }
 }

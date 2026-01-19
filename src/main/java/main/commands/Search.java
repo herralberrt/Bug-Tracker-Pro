@@ -6,32 +6,36 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.App;
 import main.AppState;
-import main.enums.ExpertiseArea;
-import main.enums.Seniority;
-import main.enums.TicketStatus;
-import main.milestone.Milestone;
-import main.ticket.Ticket;
-import main.utiliz.Developer;
-import main.utiliz.Manager;
-import main.utiliz.Utilizator;
-
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import main.enums.ExpertiseArea;
+import main.enums.Seniority;
+import main.milestone.Milestone;
+import main.ticket.Ticket;
+import main.utiliz.Developer;
+import main.utiliz.Utilizator;
+import java.time.LocalDate;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 public class Search implements Command {
 
     private final ObjectNode node;
 
-    public Search(ObjectNode node) {
+    /**
+     * Constructs a Search command
+     */
+    public Search(final ObjectNode node) {
         this.node = node;
     }
 
+    /**
+     * Executes the search command
+     */
     @Override
-    public void execute() {
+    public final void execute() {
         ObjectMapper mapper = new ObjectMapper();
         String username = node.get("username").asText();
         String timestamp = node.get("timestamp").asText();
@@ -41,23 +45,19 @@ public class Search implements Command {
 
         JsonNode filtersNode = node.get("filters");
         String searchType = filtersNode.get("searchType").asText();
-
         ObjectNode result = mapper.createObjectNode();
         result.put("command", "search");
         result.put("username", username);
         result.put("timestamp", timestamp);
         result.put("searchType", searchType);
+
         ArrayNode resultsArray = mapper.createArrayNode();
 
         if (searchType.equals("TICKET")) {
             List<Ticket> tickets = getTicketsForUser(username, isManager, isDeveloper);
             tickets = applyFilters(tickets, filtersNode, username, isManager, isDeveloper);
-
-            tickets.sort((t1, t2) -> {
-                int dateCompare = t1.getCreatedAt().compareTo(t2.getCreatedAt());
-                if (dateCompare != 0) return dateCompare;
-                return Integer.compare(t1.getId(), t2.getId());
-            });
+            tickets.sort(Comparator.comparing(
+                    Ticket::getCreatedAt).thenComparingInt(Ticket::getId));
 
             for (Ticket ticket : tickets) {
                 ObjectNode ticketNode = mapper.createObjectNode();
@@ -67,29 +67,30 @@ public class Search implements Command {
                 ticketNode.put("businessPriority", ticket.getBusinessPriority().toString());
                 ticketNode.put("status", ticket.getStatus());
                 ticketNode.put("createdAt", ticket.getCreatedAt().toString());
-                ticketNode.put("solvedAt", ticket.getSolvedAt() != null ? ticket.getSolvedAt().toString() : "");
+                ticketNode.put("solvedAt", ticket.getSolvedAt()
+                        != null ? ticket.getSolvedAt().toString() : "");
                 ticketNode.put("reportedBy", ticket.getReportedBy());
 
-                if (filtersNode.has("keywords") && isManager) {
-                    ArrayNode keywordsNode = (ArrayNode) filtersNode.get("keywords");
-                    List<String> keywords = new ArrayList<>();
-                    keywordsNode.forEach(n -> keywords.add(n.asText().toLowerCase()));
+                if (isManager) {
+                    ArrayNode matchingWordsArray = mapper.createArrayNode();
+                    if (filtersNode.has("keywords")) {
+                        ArrayNode keywordsNode = (ArrayNode) filtersNode.get("keywords");
+                        List<String> keywords = new ArrayList<>();
+                        keywordsNode.forEach(n -> keywords.add(n.asText().toLowerCase()));
 
-                    Set<String> matchingWords = findMatchingWords(ticket, keywords);
-                    if (!matchingWords.isEmpty()) {
-                        ArrayNode matchingWordsArray = mapper.createArrayNode();
+                        Set<String> matchingWords = findWords(ticket, keywords);
                         matchingWords.stream().sorted().forEach(matchingWordsArray::add);
-                        ticketNode.set("matchingWords", matchingWordsArray);
                     }
+                    ticketNode.set("matchingWords", matchingWordsArray);
                 }
 
                 resultsArray.add(ticketNode);
             }
         } else if (searchType.equals("DEVELOPER")) {
             if (isManager) {
-                List<Developer> developers = getDevelopersForManager(username);
-                developers = applyDeveloperFilters(developers, filtersNode);
-                developers.sort((d1, d2) -> d1.getUsername().compareTo(d2.getUsername()));
+                List<Developer> developers = getDev(username);
+                developers = devFil(developers, filtersNode);
+                developers.sort(Comparator.comparing(Developer::getUsername));
 
                 for (Developer dev : developers) {
                     ObjectNode devNode = mapper.createObjectNode();
@@ -107,12 +108,20 @@ public class Search implements Command {
         App.addOutput(result);
     }
 
+    /**
+     * Undo operation is not implemented for this command
+     */
     @Override
     public void undo() {
     }
 
 
-    private List<Ticket> getTicketsForUser(String username, boolean isManager, boolean isDeveloper) {
+    /**
+     * Returns the list of tickets accessible to the user based on their role
+     */
+    private List<Ticket> getTicketsForUser(final String username,
+                                           final boolean isManager,
+                                           final boolean isDeveloper) {
         if (isDeveloper) {
             List<Ticket> tickets = new ArrayList<>();
 
@@ -133,7 +142,14 @@ public class Search implements Command {
         return new ArrayList<>();
     }
 
-    private List<Ticket> applyFilters(List<Ticket> tickets, JsonNode filters, String username, boolean isManager, boolean isDeveloper) {
+    /**
+     * Applies the provided filters to the list of tickets
+     */
+    private List<Ticket> applyFilters(final List<Ticket> tickets,
+                                      final JsonNode filters,
+                                      final String username,
+                                      final boolean isManager,
+                                      final boolean isDeveloper) {
         List<Ticket> filtered = new ArrayList<>(tickets);
 
         if (filters.has("businessPriority")) {
@@ -171,7 +187,8 @@ public class Search implements Command {
                     .collect(Collectors.toList());
         }
 
-        if (filters.has("availableForAssignment") && filters.get("availableForAssignment").asBoolean()) {
+        if (filters.has("availableForAssignment")
+                && filters.get("availableForAssignment").asBoolean()) {
             if (isDeveloper) {
                 ObjectNode devNode = App.getDeveloperByUsername(username);
                 if (devNode != null) {
@@ -179,7 +196,7 @@ public class Search implements Command {
                     String devSeniority = devNode.get("seniority").asText();
 
                     filtered = filtered.stream()
-                            .filter(t -> canDeveloperAssign(devExpertise, devSeniority, t))
+                            .filter(t -> devAssign(devExpertise, devSeniority, t))
                             .collect(Collectors.toList());
                 }
             }
@@ -191,48 +208,65 @@ public class Search implements Command {
             keywordsNode.forEach(n -> keywords.add(n.asText().toLowerCase()));
 
             filtered = filtered.stream()
-                    .filter(t -> hasMatchingKeywords(t, keywords))
+                    .filter(t -> hasWords(t, keywords))
                     .collect(Collectors.toList());
         }
 
         return filtered;
     }
 
-    private boolean canDeveloperAssign(String devExpertise, String devSeniority, Ticket ticket) {
-
-        if (!canAccessExpertiseArea(devExpertise, ticket.getExpertiseArea().toString())) {
+    /**
+     * Checks if a developer can be assigned to a ticket based on expertise and seniority
+     */
+    private boolean devAssign(final String devExpertise,
+                              final String devSeniority,
+                              final Ticket ticket) {
+        if (!accArea(devExpertise, ticket.getExpertiseArea().toString())) {
             return false;
         }
 
-        if (!canAccessPriority(devSeniority, ticket.getBusinessPriority().toString())) {
+        if (!accPr(devSeniority, ticket.getBusinessPriority().toString())) {
             return false;
         }
 
-        if (!canAccessTicketType(devSeniority, ticket.getType().toString())) {
+        if (!accTicket(devSeniority, ticket.getType().toString())) {
             return false;
         }
 
         return true;
     }
 
-    private boolean canAccessExpertiseArea(String devArea, String ticketArea) {
+    /**
+     * Checks if a developer's expertise area matches the ticket's required area
+     */
+    private boolean accArea(final String devArea,
+                            final String ticketArea) {
         try {
-            ExpertiseArea devExpertise = ExpertiseArea.valueOf(devArea);
-            ExpertiseArea ticketExpertise = ExpertiseArea.valueOf(ticketArea);
+            ExpertiseArea expDev = ExpertiseArea.valueOf(devArea);
+            ExpertiseArea expTick = ExpertiseArea.valueOf(ticketArea);
 
-            switch (devExpertise) {
+            switch (expDev) {
                 case FRONTEND:
-                    return ticketExpertise == ExpertiseArea.FRONTEND || ticketExpertise == ExpertiseArea.DESIGN;
+                    return expTick == ExpertiseArea.FRONTEND
+                            || expTick == ExpertiseArea.DESIGN;
+
                 case BACKEND:
-                    return ticketExpertise == ExpertiseArea.BACKEND || ticketExpertise == ExpertiseArea.DB;
+                    return expTick == ExpertiseArea.BACKEND
+                            || expTick == ExpertiseArea.DB;
+
                 case FULLSTACK:
                     return true;
+
                 case DEVOPS:
-                    return ticketExpertise == ExpertiseArea.DEVOPS;
+                    return expTick == ExpertiseArea.DEVOPS;
+
                 case DESIGN:
-                    return ticketExpertise == ExpertiseArea.DESIGN || ticketExpertise == ExpertiseArea.FRONTEND;
+                    return expTick == ExpertiseArea.DESIGN
+                            || expTick == ExpertiseArea.FRONTEND;
+
                 case DB:
-                    return ticketExpertise == ExpertiseArea.DB;
+                    return expTick == ExpertiseArea.DB;
+
                 default:
                     return false;
             }
@@ -241,34 +275,52 @@ public class Search implements Command {
         }
     }
 
-    private boolean canAccessPriority(String seniorityStr, String priority) {
+    /**
+     * Checks if a developer's seniority allows access to a ticket's priority.
+     */
+    private boolean accPr(final String seniorityStr,
+                          final String priority) {
         Seniority seniority = Seniority.valueOf(seniorityStr);
+
         switch (seniority) {
             case JUNIOR:
                 return priority.equals("LOW") || priority.equals("MEDIUM");
+
             case MID:
                 return !priority.equals("CRITICAL");
+
             case SENIOR:
                 return true;
+
             default:
                 return false;
         }
     }
 
-    private boolean canAccessTicketType(String seniorityStr, String type) {
+    /**
+     * Checks if a developer's seniority allows access to a ticket's type
+     */
+    private boolean accTicket(final String seniorityStr,
+                              final String type) {
         Seniority seniority = Seniority.valueOf(seniorityStr);
         switch (seniority) {
             case JUNIOR:
                 return type.equals("BUG") || type.equals("UI_FEEDBACK");
+
             case MID:
             case SENIOR:
                 return true;
+
             default:
                 return false;
         }
     }
 
-    private boolean hasMatchingKeywords(Ticket ticket, List<String> keywords) {
+    /**
+     * Checks if a ticket's title contains any of the provided keywords
+     */
+    private boolean hasWords(final Ticket ticket,
+                             final List<String> keywords) {
         String title = ticket.getTitle() != null ? ticket.getTitle().toLowerCase() : "";
 
         for (String keyword : keywords) {
@@ -279,45 +331,64 @@ public class Search implements Command {
         return false;
     }
 
-    private Set<String> findMatchingWords(Ticket ticket, List<String> keywords) {
-        Set<String> matchingWords = new HashSet<>();
-        String title = ticket.getTitle() != null ? ticket.getTitle().toLowerCase() : "";
+    /**
+     * Finds and returns the set of matching words from a ticket's title based on keywords
+     */
+    private Set<String> findWords(final Ticket ticket,
+                                  final List<String> keywords) {
 
-        String[] titleWords = title.split("\\s+");
+        Set<String> match = new HashSet<>();
+        String title = ticket.getTitle() != null ? ticket.getTitle().toLowerCase() : "";
+        String[] titWords = title.split(" ");
 
         for (String keyword : keywords) {
-            for (String word : titleWords) {
-                // Remove punctuation from word
-                String cleanWord = word.replaceAll("[^a-z0-9]", "");
-                if (cleanWord.contains(keyword)) {
-                    matchingWords.add(cleanWord);
+            for (String word : titWords) {
+                StringBuilder sb = new StringBuilder();
+                for (char c : word.toCharArray()) {
+                    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+                        sb.append(c);
+                    }
+                }
+                String cln = sb.toString();
+                if (cln.contains(keyword)) {
+                    match.add(cln);
                 }
             }
         }
 
-        return matchingWords;
+        return match;
     }
 
-    private List<Developer> getDevelopersForManager(String managerUsername) {
-        List<String> subordinates = AppState.getManagerSubordinates(managerUsername);
+    /**
+     * Returns the list of developers managed by the given manager
+     */
+    private List<Developer> getDev(final String managerUsername) {
+        List<String> subordinates = AppState.getManSubord(managerUsername);
         List<Developer> developers = new ArrayList<>();
 
         for (String devUsername : subordinates) {
             ObjectNode devNode = App.getDeveloperByUsername(devUsername);
             if (devNode != null) {
-                String hireDate = devNode.get("hireDate").asText();
-                Seniority seniority = Seniority.valueOf(devNode.get("seniority").asText());
-                ExpertiseArea expertiseArea = ExpertiseArea.valueOf(devNode.get("expertiseArea").asText());
-
-                Developer dev = new Developer(devUsername, "", LocalDate.parse(hireDate), seniority, expertiseArea);
-                developers.add(dev);
+                Utilizator utiliz = main.utiliz.UtilizFactory.create(devNode);
+                if (utiliz instanceof Developer) {
+                    Developer dev = (Developer) utiliz;
+                    if (devNode.has("performanceScore")) {
+                        dev.setPerformanceScore(devNode.get("performanceScore").asDouble());
+                    }
+                    developers.add(dev);
+                }
             }
         }
 
         return developers;
     }
 
-    private List<Developer> applyDeveloperFilters(List<Developer> developers, JsonNode filters) {
+    /**
+     * Applies the provided filters to the list of developers
+     */
+    private List<Developer> devFil(final List<Developer> developers,
+                                   final JsonNode filters) {
+
         List<Developer> filtered = new ArrayList<>(developers);
 
         if (filters.has("expertiseArea")) {
@@ -337,17 +408,16 @@ public class Search implements Command {
         if (filters.has("performanceScoreAbove")) {
             double score = filters.get("performanceScoreAbove").asDouble();
             filtered = filtered.stream()
-                    .filter(d -> d.getPerformanceScore() > score)
+                    .filter(d -> d.getPerformanceScore() >= score)
                     .collect(Collectors.toList());
         }
 
         if (filters.has("performanceScoreBelow")) {
             double score = filters.get("performanceScoreBelow").asDouble();
             filtered = filtered.stream()
-                    .filter(d -> d.getPerformanceScore() < score)
+                    .filter(d -> d.getPerformanceScore() <= score)
                     .collect(Collectors.toList());
         }
-
         return filtered;
     }
 }

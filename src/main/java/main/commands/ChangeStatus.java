@@ -6,22 +6,29 @@ import main.App;
 import main.AppState;
 import main.enums.TicketStatus;
 import main.ticket.Ticket;
+
 import java.time.LocalDate;
 
-public class ChangeStatus implements Command {
+public final class ChangeStatus implements Command {
 
     private final ObjectNode node;
     private final String username;
     private final int ticketID;
     private final LocalDate timestamp;
 
-    public ChangeStatus(ObjectNode node) {
+    /**
+     * Constructs a ChangeStatus command
+     */
+    public ChangeStatus(final ObjectNode node) {
         this.node = node;
         this.username = node.get("username").asText();
         this.ticketID = node.get("ticketID").asInt();
         this.timestamp = LocalDate.parse(node.get("timestamp").asText());
     }
 
+    /**
+     * Executes the change status command
+     */
     @Override
     public void execute() {
         Ticket ticket = AppState.getTicketById(ticketID);
@@ -33,10 +40,12 @@ public class ChangeStatus implements Command {
         if (!username.equals(ticket.getAssignedTo())) {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode error = mapper.createObjectNode();
+            
             error.put("command", "changeStatus");
             error.put("username", username);
             error.put("timestamp", timestamp.toString());
-            error.put("error", "Ticket " + ticketID + " is not assigned to developer " + username + ".");
+            error.put("error", "Ticket " + ticketID
+                    + " is not assigned to developer " + username + ".");
             App.addOutput(error);
             return;
         }
@@ -45,42 +54,47 @@ public class ChangeStatus implements Command {
             return;
         }
 
-        TicketStatus oldStatus = ticket.getStatusEnum();
-        TicketStatus newStatus = null;
+        TicketStatus oldStat = ticket.getStatusEnum();
+        TicketStatus newStat = null;
 
-        if (oldStatus == TicketStatus.IN_PROGRESS) {
-            newStatus = TicketStatus.RESOLVED;
+        if (oldStat == TicketStatus.IN_PROGRESS) {
+            newStat = TicketStatus.RESOLVED;
             ticket.setSolvedAt(timestamp);
-        } else if (oldStatus == TicketStatus.RESOLVED) {
-            newStatus = TicketStatus.CLOSED;
+        } else if (oldStat == TicketStatus.RESOLVED) {
+            newStat = TicketStatus.CLOSED;
         }
 
-        if (newStatus != null) {
-            ticket.setStatus(newStatus);
+        if (newStat != null) {
+            ticket.setStatus(newStat);
 
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode historyEntry = mapper.createObjectNode();
-            historyEntry.put("action", "STATUS_CHANGED");
-            historyEntry.put("from", oldStatus.name());
-            historyEntry.put("to", newStatus.name());
+
+            historyEntry.put("from", oldStat.name());
+            historyEntry.put("to", newStat.name());
             historyEntry.put("by", username);
             historyEntry.put("timestamp", timestamp.toString());
+            historyEntry.put("action", "STATUS_CHANGED");
             ticket.addHistoryEntry(historyEntry);
 
-           if (newStatus == TicketStatus.CLOSED) {
+            if (newStat == TicketStatus.CLOSED) {
                 String milestoneName = AppState.getMilestoneNameByTicket(ticketID);
                 if (milestoneName != null) {
                     main.milestone.Milestone milestone = AppState.getMilestoneByName(milestoneName);
                     if (milestone != null) {
                         milestone.freezeMetricsIfCompleted(timestamp);
-                        AppState.checkMilestoneUnblocking(milestoneName, ticketID, timestamp.toString());
+                        AppState.milesUnblock(milestoneName, ticketID, timestamp.toString());
                     }
                 }
             }
         }
     }
 
+    /**
+     * Undoes the change status command
+     */
     @Override
     public void undo() {
+
     }
 }

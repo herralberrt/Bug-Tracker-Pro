@@ -6,97 +6,94 @@ import main.App;
 import main.AppState;
 import main.ticket.Ticket;
 
-public class AddComment implements Command {
+public final class AddComment implements Command {
+    private static final String COMMAND_NAME = "addComment";
+    private static final int MIN_COMMENT_LENGTH = 10;
+    private final ObjectNode input;
 
-    private final ObjectNode node;
-
-    public AddComment(final ObjectNode node) {
-        this.node = node;
+    /**
+     * Constructs an AddComment command
+     */
+    public AddComment(final ObjectNode input) {
+        this.input = input;
     }
 
+    /**
+     * Executes the add comment command
+     */
     @Override
     public void execute() {
-        String username = node.get("username").asText();
-        int ticketId = node.get("ticketID").asInt();
-        String comment = node.get("comment").asText();
-        String timestamp = node.get("timestamp").asText();
+        String username = input.get("username").asText();
+        int ticketId = input.get("ticketID").asInt();
+        String commentText = input.get("comment").asText();
+        String timestamp = input.get("timestamp").asText();
         Ticket ticket = AppState.getTicketById(ticketId);
+
         if (ticket == null) {
             return;
         }
 
+        String rol = App.getUserRole(username);
+
         if (ticket.isAnonymous()) {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", "addComment");
-            error.put("username", username);
-            error.put("timestamp", timestamp);
-            error.put("error", "Comments are not allowed on anonymous tickets.");
-            App.addOutput(error);
+            addError(username, timestamp, "Comments are not allowed on anonymous tickets.");
             return;
         }
 
-        String userRole = App.getUserRole(username);
-
-        if (userRole.equals("REPORTER") && ticket.getStatus().equals("CLOSED")) {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", "addComment");
-            error.put("username", username);
-            error.put("timestamp", timestamp);
-            error.put("error", "Reporters cannot comment on CLOSED tickets.");
-            App.addOutput(error);
+        if (rol.equals("REPORTER") && ticket.getStatus().equals("CLOSED")) {
+            addError(username, timestamp, "Reporters cannot comment on CLOSED tickets.");
             return;
         }
 
-        if (comment.length() < 10) {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", "addComment");
-            error.put("username", username);
-            error.put("timestamp", timestamp);
-            error.put("error", "Comment must be at least 10 characters long.");
-            App.addOutput(error);
+        if (commentText.length() < MIN_COMMENT_LENGTH) {
+            addError(username, timestamp, "Comment must be at least 10 characters long.");
             return;
         }
 
-        if (userRole.equals("DEVELOPER")) {
-            String assignedTo = ticket.getAssignedTo();
-            if (assignedTo == null || !assignedTo.equals(username)) {
-                ObjectMapper mapper = new ObjectMapper();
-                ObjectNode error = mapper.createObjectNode();
-                error.put("command", "addComment");
-                error.put("username", username);
-                error.put("timestamp", timestamp);
-                error.put("error", "Ticket " + ticketId + " is not assigned to the developer " + username + ".");
-                App.addOutput(error);
-                return;
-            }
+        if (rol.equals("DEVELOPER")
+                && !username.equals(ticket.getAssignedTo())) {
+            addError(username, timestamp,
+                    "Ticket " + ticketId + " is not assigned to the developer " + username + ".");
+            return;
         }
 
-        if (userRole.equals("REPORTER")) {
-            if (!ticket.getReportedBy().equals(username)) {
-                ObjectMapper mapper = new ObjectMapper();
-                ObjectNode error = mapper.createObjectNode();
-                error.put("command", "addComment");
-                error.put("username", username);
-                error.put("timestamp", timestamp);
-                error.put("error", "Reporter " + username + " cannot comment on ticket " + ticketId + ".");
-                App.addOutput(error);
-                return;
-            }
+        if (rol.equals("REPORTER")
+                && !username.equals(ticket.getReportedBy())) {
+            addError(username, timestamp,
+                    "Reporter " + username + " cannot comment on ticket " + ticketId + ".");
+            return;
         }
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode commentNode = mapper.createObjectNode();
-        commentNode.put("author", username);
-        commentNode.put("content", comment);
-        commentNode.put("createdAt", timestamp);
 
+        commentNode.put("author", username);
+        commentNode.put("content", commentText);
+        commentNode.put("createdAt", timestamp);
         ticket.addComment(commentNode);
     }
 
+    /**
+     * Adds an error message to the output for the add comment command
+     */
+    private void addError(final String username,
+                          final String timestamp,
+                          final String message) {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode error = mapper.createObjectNode();
+
+        error.put("command", COMMAND_NAME);
+        error.put("username", username);
+        error.put("timestamp", timestamp);
+        error.put("error", message);
+        App.addOutput(error);
+    }
+
+    /**
+     * Undoes the add comment command
+     */
     @Override
     public void undo() {
+
     }
 }

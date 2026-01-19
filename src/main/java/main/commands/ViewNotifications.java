@@ -3,18 +3,24 @@ package main.commands;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.List;
 import main.App;
 
-import java.util.List;
 
-public class ViewNotifications implements Command {
+public final class ViewNotifications implements Command {
 
     private final ObjectNode node;
 
+    /**
+     * Constructs a ViewNotifications command
+     */
     public ViewNotifications(final ObjectNode node) {
         this.node = node;
     }
 
+    /**
+     * Executes the viewNotifications command
+     */
     @Override
     public void execute() {
         ObjectMapper mapper = new ObjectMapper();
@@ -26,18 +32,24 @@ public class ViewNotifications implements Command {
         result.put("username", username);
         result.put("timestamp", timestamp);
 
-        ArrayNode notificationsArray = mapper.createArrayNode();
-        List<String> notifications = App.getNotifications(username);
-        for (String notification : notifications) {
-            notificationsArray.add(notification);
+        ArrayNode arrNot = mapper.createArrayNode();
+        main.utiliz.Developer dev = main.AppState.getDeveloperInstanceByUsername(username);
+        if (dev != null) {
+
+            List<String> notifications = dev.getNotifications();
+
+            for (String notification : notifications) {
+                arrNot.add(notification);
+            }
+            notifications.clear();
         }
-
-        result.set("notifications", notificationsArray);
+        result.set("notifications", arrNot);
         App.addOutput(result);
-
-        App.clearNotifications(username);
     }
 
+    /**
+     * Undoes the viewNotifications command
+     */
     @Override
     public void undo() {
     }

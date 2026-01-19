@@ -5,27 +5,34 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.App;
 import main.AppState;
 import main.ticket.Ticket;
-import main.ticket.TicketFactory;
 import main.enums.Type;
+import main.ticket.TicketFactory;
 import main.enums.BusinessPriority;
 
-public class ReportTicket implements Command {
+public final class ReportTicket implements Command {
 
     private final ObjectNode node;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public ReportTicket(ObjectNode node) {
+    /**
+     * Constructs a ReportTicket command
+     */
+    public ReportTicket(final ObjectNode node) {
         this.node = node;
     }
 
+    /**
+     * Executes the report ticket command
+     */
     @Override
     public void execute() {
 
         String username = node.get("username").asText();
         String timestamp = node.get("timestamp").asText();
 
-        if (!AppState.isInTestingPhase(timestamp)) {
+        if (!AppState.inPhase(timestamp)) {
             ObjectNode out = mapper.createObjectNode();
+            
             out.put("command", "reportTicket");
             out.put("username", username);
             out.put("timestamp", timestamp);
@@ -36,6 +43,7 @@ public class ReportTicket implements Command {
 
         if (!AppState.userExists(username)) {
             ObjectNode out = mapper.createObjectNode();
+            
             out.put("command", "reportTicket");
             out.put("username", username);
             out.put("timestamp", node.get("timestamp").asText());
@@ -50,6 +58,7 @@ public class ReportTicket implements Command {
 
         if (reportedBy.isEmpty() && type != Type.BUG) {
             ObjectNode out = mapper.createObjectNode();
+            
             out.put("command", "reportTicket");
             out.put("username", username);
             out.put("timestamp", node.get("timestamp").asText());
@@ -62,15 +71,23 @@ public class ReportTicket implements Command {
             params.put("businessPriority", BusinessPriority.LOW.name());
         }
 
-        Ticket ticket = TicketFactory.create(
-                AppState.nextTicketId(),
-                node.get("timestamp").asText(),
-                params
-        );
+        int newId = AppState.nextTicketId();
+        Ticket ticket = TicketFactory.create(newId, node.get("timestamp").asText(),
+                params);
 
         AppState.addTicket(ticket);
+
+        main.notif.Notification notif = main.notif.NotificationFactory.createTicket(
+                newId, params.get("type").asText(), params.get("reportedBy").asText());
+        String rep = params.get("reportedBy").asText();
+        if (rep != null && !rep.isEmpty()) {
+            App.addNotification(rep, node.get("timestamp").asText(), notif.getMessage());
+        }
     }
 
+    /**
+     * Undoes the report ticket command
+     */
     @Override
     public void undo() {
 

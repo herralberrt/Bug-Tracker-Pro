@@ -2,11 +2,13 @@ package main.commands;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public final class CommandFactory {
+public enum CommandFactory {
+    INSTANCE;
 
-    private CommandFactory() {}
-
-    public static Command createCommand(ObjectNode node) {
+    /**
+     * Returns a command for the given node
+     */
+    public Command createCommand(final ObjectNode node) {
         String command = node.get("command").asText();
 
         if (command.equals("reportTicket")) {
@@ -49,8 +51,10 @@ public final class CommandFactory {
             return new AppStabilityReport(node);
         } else if (command.equals("generatePerformanceReport")) {
             return new GeneratePerformanceReport(node);
+        } else if (command.equals("startTestingPhase")) {
+            return new StartTestingPhase(node);
         } else {
-            throw new IllegalArgumentException("Unknown command");
+            return null;
         }
     }
 }

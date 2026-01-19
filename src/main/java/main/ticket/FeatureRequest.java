@@ -2,16 +2,21 @@ package main.ticket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import main.enums.*;
-
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import main.enums.BusinessValue;
+import main.enums.BusinessPriority;
+import main.enums.TicketStatus;
+import main.enums.ExpertiseArea;
+import main.enums.CustomerDemand;
+import main.enums.Type;
 import java.time.LocalDate;
 
-public class FeatureRequest extends Ticket {
+public final class FeatureRequest extends Ticket {
 
     private final BusinessValue businessValue;
     private final CustomerDemand customerDemand;
 
-    private FeatureRequest(Builder builder) {
+    private FeatureRequest(final Builder builder) {
         super(builder.id, Type.FEATURE_REQUEST, builder.title, builder.businessPriority,
                 builder.status, builder.expertiseArea, builder.description,
                 builder.reportedBy, builder.createdAt, builder.solvedAt);
@@ -20,7 +25,10 @@ public class FeatureRequest extends Ticket {
         this.customerDemand = builder.customerDemand;
     }
 
-    public static class Builder {
+    /**
+     * Builder for FeatureRequest objects
+     */
+    public static final class Builder {
 
         private int id;
         private String title;
@@ -29,57 +37,86 @@ public class FeatureRequest extends Ticket {
         private ExpertiseArea expertiseArea;
         private String description;
         private String reportedBy;
+        private BusinessValue businessValue;
+        private CustomerDemand customerDemand;
         private LocalDate createdAt;
         private LocalDate solvedAt;
 
-        private BusinessValue businessValue;
-        private CustomerDemand customerDemand;
-
-        public Builder id(int id) {
-            this.id = id;
+        /**
+         * Sets the feature request id
+         */
+        public Builder id(final int idParam) {
+            this.id = idParam;
             return this;
         }
 
-        public Builder title(String title) {
-            this.title = title;
+        /**
+         * Sets the feature request title
+         */
+        public Builder title(final String titleParam) {
+            this.title = titleParam;
             return this;
         }
 
-        public Builder businessPriority(BusinessPriority bp) {
-            this.businessPriority = bp;
+        /**
+         * Sets the business priority
+         */
+        public Builder businessPriority(final BusinessPriority businessPriorityParam) {
+            this.businessPriority = businessPriorityParam;
             return this;
         }
 
-        public Builder expertiseArea(ExpertiseArea ea) {
-            this.expertiseArea = ea;
+        /**
+         * Sets the expertise area
+         */
+        public Builder expertiseArea(final ExpertiseArea expertiseAreaParam) {
+            this.expertiseArea = expertiseAreaParam;
             return this;
         }
 
-        public Builder description(String desc) {
+        /**
+         * Sets the description
+         */
+        public Builder description(final String desc) {
             this.description = desc;
             return this;
         }
 
-        public Builder reportedBy(String reporter) {
+        /**
+         * Sets the reporter
+         */
+        public Builder reportedBy(final String reporter) {
             this.reportedBy = reporter;
             return this;
         }
 
-        public Builder createdAt(LocalDate date) {
-            this.createdAt = date;
+        /**
+         * Sets the creation date
+         */
+        public Builder createdAt(final LocalDate dateParam) {
+            this.createdAt = dateParam;
             return this;
         }
 
-        public Builder businessValue(BusinessValue bv) {
-            this.businessValue = bv;
+        /**
+         * Sets the business value
+         */
+        public Builder businessValue(final BusinessValue businessValueParam) {
+            this.businessValue = businessValueParam;
             return this;
         }
 
-        public Builder customerDemand(CustomerDemand cd) {
-            this.customerDemand = cd;
+        /**
+         * Sets the customer demand
+         */
+        public Builder customerDemand(final CustomerDemand customerDemandParam) {
+            this.customerDemand = customerDemandParam;
             return this;
         }
 
+        /**
+         * Builds the FeatureRequest object
+         */
         public FeatureRequest build() {
             return new FeatureRequest(this);
         }
@@ -94,7 +131,7 @@ public class FeatureRequest extends Ticket {
     }
 
     @Override
-    public ObjectNode toJson(ObjectMapper mapper) {
+    public ObjectNode toJson(final ObjectMapper mapper) {
         ObjectNode node = mapper.createObjectNode();
 
         node.put("id", id);
@@ -106,11 +143,11 @@ public class FeatureRequest extends Ticket {
         node.put("assignedAt", assignedAt == null ? "" : assignedAt.toString());
         node.put("reportedBy", reportedBy);
 
-        var commentsArray = mapper.createArrayNode();
-        for (var comment : comments) {
-            commentsArray.add(comment);
+        ArrayNode arrComm = mapper.createArrayNode();
+        for (ObjectNode comment : comments) {
+            arrComm.add(comment);
         }
-        node.set("comments", commentsArray);
+        node.set("comments", arrComm);
         return node;
     }
 }

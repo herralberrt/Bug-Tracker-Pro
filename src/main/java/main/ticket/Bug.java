@@ -2,11 +2,16 @@ package main.ticket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import main.enums.*;
-
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import main.enums.BusinessPriority;
+import main.enums.ExpertiseArea;
+import main.enums.Frequency;
+import main.enums.Severity;
+import main.enums.TicketStatus;
+import main.enums.Type;
 import java.time.LocalDate;
 
-public class Bug extends Ticket {
+public final class Bug extends Ticket {
 
     private final String expectedBehavior;
     private final String actualBehavior;
@@ -15,7 +20,7 @@ public class Bug extends Ticket {
     private final String environment;
     private final Integer errorCode;
 
-    private Bug(Builder builder) {
+    private Bug(final Builder builder) {
         super(builder.id, Type.BUG, builder.title, builder.businessPriority, builder.status,
                 builder.expertiseArea, builder.description, builder.reportedBy,
                 builder.createdAt, builder.solvedAt);
@@ -28,7 +33,10 @@ public class Bug extends Ticket {
         this.errorCode = builder.errorCode;
     }
 
-    public static class Builder {
+    /**
+     * Builder for Bug objects
+     */
+    public static final class Builder {
 
         private int id;
         private String title;
@@ -46,71 +54,113 @@ public class Bug extends Ticket {
         private String environment;
         private Integer errorCode;
 
-        public Builder id(int id) {
-            this.id = id;
+        /**
+         * Sets the bug id
+         */
+        public Builder id(final int bugId) {
+            this.id = bugId;
             return this;
         }
 
-        public Builder title(String title) {
-            this.title = title;
+        /**
+         * Sets the bug title
+         */
+        public Builder title(final String titleParam) {
+            this.title = titleParam;
             return this;
         }
 
-        public Builder businessPriority(BusinessPriority bp) {
-            this.businessPriority = bp;
+        /**
+         * Sets the business priority
+         */
+        public Builder businessPriority(final BusinessPriority bPriority) {
+            this.businessPriority = bPriority;
             return this;
         }
 
-        public Builder expertiseArea(ExpertiseArea ea) {
-            this.expertiseArea = ea;
+        /**
+         * Sets the expertise area
+         */
+        public Builder expertiseArea(final ExpertiseArea expArea) {
+            this.expertiseArea = expArea;
             return this;
         }
 
-        public Builder description(String desc) {
+        /**
+         * Sets the description
+         */
+        public Builder description(final String desc) {
             this.description = desc;
             return this;
         }
 
-        public Builder reportedBy(String reporter) {
+        /**
+         * Sets the reporter
+         */
+        public Builder reportedBy(final String reporter) {
             this.reportedBy = reporter;
             return this;
         }
 
-        public Builder createdAt(LocalDate date) {
+        /**
+         * Sets the creation date
+         */
+        public Builder createdAt(final LocalDate date) {
             this.createdAt = date;
             return this;
         }
 
-        public Builder expectedBehavior(String v) {
-            this.expectedBehavior = v;
+        /**
+         * Sets the expected behavior
+         */
+        public Builder expectedBehavior(final String expBehavior) {
+            this.expectedBehavior = expBehavior;
             return this;
         }
 
-        public Builder actualBehavior(String v) {
-            this.actualBehavior = v;
+        /**
+         * Sets the actual behavior
+         */
+        public Builder actualBehavior(final String actBehavior) {
+            this.actualBehavior = actBehavior;
             return this;
         }
 
-        public Builder frequency(Frequency f) {
-            this.frequency = f;
+        /**
+         * Sets the frequency
+         */
+        public Builder frequency(final Frequency freq) {
+            this.frequency = freq;
             return this;
         }
 
-        public Builder severity(Severity s) {
-            this.severity = s;
+        /**
+         * Sets the severity
+         */
+        public Builder severity(final Severity sev) {
+            this.severity = sev;
             return this;
         }
 
-        public Builder environment(String env) {
+        /**
+         * Sets the environment
+         */
+        public Builder environment(final String env) {
             this.environment = env;
             return this;
         }
 
-        public Builder errorCode(Integer code) {
+        /**
+         * Sets the error code
+         */
+        public Builder errorCode(final Integer code) {
             this.errorCode = code;
             return this;
         }
 
+        /**
+         * Builds the Bug object
+         */
         public Bug build() {
             return new Bug(this);
         }
@@ -125,7 +175,7 @@ public class Bug extends Ticket {
     }
 
     @Override
-    public ObjectNode toJson(ObjectMapper mapper) {
+    public ObjectNode toJson(final ObjectMapper mapper) {
         ObjectNode node = mapper.createObjectNode();
 
         node.put("id", id);
@@ -137,11 +187,11 @@ public class Bug extends Ticket {
         node.put("assignedAt", assignedAt == null ? "" : assignedAt.toString());
         node.put("reportedBy", reportedBy);
 
-        var commentsArray = mapper.createArrayNode();
-        for (var comment : comments) {
-            commentsArray.add(comment);
+        ArrayNode arrComm = mapper.createArrayNode();
+        for (ObjectNode comment : comments) {
+            arrComm.add(comment);
         }
-        node.set("comments", commentsArray);
+        node.set("comments", arrComm);
         return node;
     }
 }

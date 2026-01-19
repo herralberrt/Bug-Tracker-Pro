@@ -2,11 +2,16 @@ package main.ticket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import main.enums.*;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import main.enums.BusinessPriority;
+import main.enums.BusinessValue;
+import main.enums.ExpertiseArea;
+import main.enums.TicketStatus;
+import main.enums.Type;
 
 import java.time.LocalDate;
 
-public class UiFeedback extends Ticket {
+public final class UiFeedback extends Ticket {
 
     private final String uiElementId;
     private final BusinessValue businessValue;
@@ -14,7 +19,7 @@ public class UiFeedback extends Ticket {
     private final String screenshotUrl;
     private final String suggestedFix;
 
-    private UiFeedback(Builder builder) {
+    private UiFeedback(final Builder builder) {
         super(builder.id, Type.UI_FEEDBACK, builder.title, builder.businessPriority,
                 builder.status, builder.expertiseArea, builder.description,
                 builder.reportedBy, builder.createdAt, builder.solvedAt);
@@ -26,7 +31,10 @@ public class UiFeedback extends Ticket {
         this.suggestedFix = builder.suggestedFix;
     }
 
-    public static class Builder {
+    /**
+     * Builder for UiFeedback objects
+     */
+    public static final class Builder {
 
         private int id;
         private String title;
@@ -37,73 +45,111 @@ public class UiFeedback extends Ticket {
         private String reportedBy;
         private LocalDate createdAt;
         private LocalDate solvedAt;
-
+        private String screenshotUrl;
+        private String suggestedFix;
         private String uiElementId;
         private BusinessValue businessValue;
         private int usabilityScore;
-        private String screenshotUrl;
-        private String suggestedFix;
 
-        public Builder id(int id) {
-            this.id = id;
+        /**
+         * Sets the ticket id
+         */
+        public Builder id(final int ticketId) {
+            this.id = ticketId;
             return this;
         }
 
-        public Builder title(String title) {
-            this.title = title;
+        /**
+         * Sets the ticket title
+         */
+        public Builder title(final String ticketTitle) {
+            this.title = ticketTitle;
             return this;
         }
 
-        public Builder businessPriority(BusinessPriority bp) {
-            this.businessPriority = bp;
+        /**
+         * Sets the business priority
+         */
+        public Builder businessPriority(final BusinessPriority bPriority) {
+            this.businessPriority = bPriority;
             return this;
         }
 
-        public Builder expertiseArea(ExpertiseArea ea) {
-            this.expertiseArea = ea;
+        /**
+         * Sets the expertise area
+         */
+        public Builder expertiseArea(final ExpertiseArea expArea) {
+            this.expertiseArea = expArea;
             return this;
         }
 
-        public Builder description(String desc) {
+        /**
+         * Sets the description
+         */
+        public Builder description(final String desc) {
             this.description = desc;
             return this;
         }
 
-        public Builder reportedBy(String reporter) {
+        /**
+         * Sets the reporter
+         */
+        public Builder reportedBy(final String reporter) {
             this.reportedBy = reporter;
             return this;
         }
 
-        public Builder createdAt(LocalDate date) {
+        /**
+         * Sets the creation date
+         */
+        public Builder createdAt(final LocalDate date) {
             this.createdAt = date;
             return this;
         }
 
-        public Builder uiElementId(String id) {
-            this.uiElementId = id;
+        /**
+         * Sets the UI element id
+         */
+        public Builder uiElementId(final String elementId) {
+            this.uiElementId = elementId;
             return this;
         }
 
-        public Builder businessValue(BusinessValue bv) {
-            this.businessValue = bv;
+        /**
+         * Sets the business value
+         */
+        public Builder businessValue(final BusinessValue bValue) {
+            this.businessValue = bValue;
             return this;
         }
 
-        public Builder usabilityScore(int score) {
+        /**
+         * Sets the usability score
+         */
+        public Builder usabilityScore(final int score) {
             this.usabilityScore = score;
             return this;
         }
 
-        public Builder screenshotUrl(String url) {
+        /**
+         * Sets the screenshot URL
+         */
+        public Builder screenshotUrl(final String url) {
             this.screenshotUrl = url;
             return this;
         }
 
-        public Builder suggestedFix(String fix) {
+        /**
+         * Sets the suggested fix
+         */
+        public Builder suggestedFix(final String fix) {
             this.suggestedFix = fix;
             return this;
         }
 
+        /**
+         * Builds the UiFeedback object
+         */
         public UiFeedback build() {
             return new UiFeedback(this);
         }
@@ -118,7 +164,7 @@ public class UiFeedback extends Ticket {
     }
 
     @Override
-    public ObjectNode toJson(ObjectMapper mapper) {
+    public ObjectNode toJson(final ObjectMapper mapper) {
         ObjectNode node = mapper.createObjectNode();
 
         node.put("id", id);
@@ -130,11 +176,11 @@ public class UiFeedback extends Ticket {
         node.put("assignedAt", assignedAt == null ? "" : assignedAt.toString());
         node.put("reportedBy", reportedBy);
 
-        var commentsArray = mapper.createArrayNode();
-        for (var comment : comments) {
-            commentsArray.add(comment);
+        ArrayNode arrComm = mapper.createArrayNode();
+        for (ObjectNode comment : comments) {
+            arrComm.add(comment);
         }
-        node.set("comments", commentsArray);
+        node.set("comments", arrComm);
         return node;
     }
 }

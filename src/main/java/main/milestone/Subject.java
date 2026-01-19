@@ -1,7 +1,14 @@
 package main.milestone;
 
 public interface Subject {
-    void attach(Observer o);
-    void detach(Observer o);
-    void notifyObservers(String message);
+
+    /**
+     * Attaches an observer
+     */
+    void addObs(Observer o);
+
+    /**
+     * Notifies all observers
+     */
+    void notifObs(String message);
 }

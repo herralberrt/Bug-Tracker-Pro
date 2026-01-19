@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class Milestone implements Subject {
+    private static final double PERCENTAGE_FACTOR = 100.0;
 
     private final String name;
     private final List<String> blockingFor;
@@ -19,14 +20,17 @@ public class Milestone implements Subject {
     private final LocalDate createdAt;
     private final List<Integer> tickets;
     private final List<String> assignedDevs;
-    private final String createdBy;
     private final List<Observer> observers = new ArrayList<>();
+    private final String createdBy;
     private Integer frozenDaysUntilDue = null;
     private Integer frozenOverdueBy = null;
 
-    public Milestone(String name, List<String> blockingFor, LocalDate dueDate,
-                     LocalDate createdAt, List<Integer> tickets,
-                     List<String> assignedDevs, String createdBy) {
+    /**
+     * Milestone constructor
+     */
+    public Milestone(final String name, final List<String> blockingFor, final LocalDate dueDate,
+                     final LocalDate createdAt, final List<Integer> tickets,
+                     final List<String> assignedDevs, final String createdBy) {
 
         this.name = name;
         this.blockingFor = blockingFor;
@@ -35,32 +39,54 @@ public class Milestone implements Subject {
         this.tickets = tickets;
         this.assignedDevs = assignedDevs;
         this.createdBy = createdBy;
+        syncObserversWithAssignedDevs();
     }
 
+    /**
+     * Returns the milestone name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the blockingFor list
+     */
     public List<String> getBlockingFor() {
         return blockingFor;
     }
 
+    /**
+     * Returns the tickets list
+     */
     public List<Integer> getTickets() {
         return tickets;
     }
 
+    /**
+     * Returns the assigned developers list
+     */
     public List<String> getAssignedDevs() {
         return assignedDevs;
     }
 
+    /**
+     * Returns the creator username
+     */
     public String getCreatedBy() {
         return createdBy;
     }
 
+    /**
+     * Returns the due date
+     */
     public LocalDate getDueDate() {
         return dueDate;
     }
 
+    /**
+     * Returns true if the milestone is blocked
+     */
     public boolean isBlocked() {
         for (Milestone m : AppState.getMilestones()) {
             if (m.blockingFor.contains(this.name)) {
@@ -72,6 +98,9 @@ public class Milestone implements Subject {
         return false;
     }
 
+    /**
+     * Returns true if milestone contains any open tickets
+     */
     public boolean containsAnyOpenTickets() {
         for (Integer ticketId : tickets) {
             Ticket ticket = AppState.getTicketById(ticketId);
@@ -82,7 +111,10 @@ public class Milestone implements Subject {
         return false;
     }
 
-    public int calculateDaysRemainingUntilDue(LocalDate currentDate) {
+    /**
+     * Calculates days remaining until due date
+     */
+    public int calculateDaysRemainingUntilDue(final LocalDate currentDate) {
         if (frozenDaysUntilDue != null) {
             return frozenDaysUntilDue;
         }
@@ -93,7 +125,10 @@ public class Milestone implements Subject {
         return (int) ChronoUnit.DAYS.between(currentDate, dueDate) + 1;
     }
 
-    public int calculateDaysOverdue(LocalDate currentDate) {
+    /**
+     * Calculates days overdue
+     */
+    public int calculateDaysOverdue(final LocalDate currentDate) {
         if (frozenOverdueBy != null) {
             return frozenOverdueBy;
         }
@@ -104,6 +139,9 @@ public class Milestone implements Subject {
         return (int) ChronoUnit.DAYS.between(dueDate, currentDate) + 1;
     }
 
+    /**
+     * Returns the milestone status
+     */
     public String getStatus() {
         for (Integer ticketId : tickets) {
             Ticket ticket = AppState.getTicketById(ticketId);
@@ -114,13 +152,19 @@ public class Milestone implements Subject {
         return "COMPLETED";
     }
 
-    public void freezeMetricsIfCompleted(LocalDate currentDate) {
+    /**
+     * Freezes metrics if milestone is completed
+     */
+    public void freezeMetricsIfCompleted(final LocalDate currentDate) {
         if (getStatus().equals("COMPLETED") && frozenDaysUntilDue == null) {
             frozenDaysUntilDue = calculateDaysRemainingUntilDue(currentDate);
             frozenOverdueBy = calculateDaysOverdue(currentDate);
         }
     }
 
+    /**
+     * Returns all open ticket ids
+     */
     public List<Integer> retrieveAllOpenTicketIds() {
         List<Integer> openTickets = new ArrayList<>();
         for (Integer ticketId : tickets) {
@@ -132,6 +176,9 @@ public class Milestone implements Subject {
         return openTickets;
     }
 
+    /**
+     * Returns all closed ticket ids
+     */
     public List<Integer> retrieveAllClosedTicketIds() {
         List<Integer> closedTickets = new ArrayList<>();
         for (Integer ticketId : tickets) {
@@ -143,59 +190,65 @@ public class Milestone implements Subject {
         return closedTickets;
     }
 
+    /**
+     * Calculates the completion percentage
+     */
     public double calculateCompletionPercentage() {
         if (tickets.isEmpty()) {
             return 0.0;
         }
         int closedCount = retrieveAllClosedTicketIds().size();
         double fraction = closedCount * 1.0 / tickets.size();
-        return Math.round(fraction * 100.0) / 100.0;
+        return Math.round(fraction * PERCENTAGE_FACTOR) / PERCENTAGE_FACTOR;
     }
 
-    public ObjectNode toJson(ObjectMapper mapper, LocalDate currentDate) {
+    /**
+     * Returns a JSON representation of the milestone
+     */
+    public ObjectNode toJson(final ObjectMapper mapper, final LocalDate currentDate) {
         ObjectNode node = mapper.createObjectNode();
-
         node.put("name", name);
-
         ArrayNode blockingForArray = mapper.createArrayNode();
+
         for (String blocked : blockingFor) {
             blockingForArray.add(blocked);
         }
-        node.set("blockingFor", blockingForArray);
 
+        node.set("blockingFor", blockingForArray);
         node.put("dueDate", dueDate.toString());
         node.put("createdAt", createdAt.toString());
-
         ArrayNode ticketsArray = mapper.createArrayNode();
+
         for (Integer ticketId : tickets) {
             ticketsArray.add(ticketId);
         }
-        node.set("tickets", ticketsArray);
 
+        node.set("tickets", ticketsArray);
         ArrayNode devsArray = mapper.createArrayNode();
+
         for (String dev : assignedDevs) {
             devsArray.add(dev);
         }
-        node.set("assignedDevs", devsArray);
 
+        node.set("assignedDevs", devsArray);
         node.put("createdBy", createdBy);
         node.put("status", getStatus());
         node.put("isBlocked", isBlocked());
         node.put("daysUntilDue", calculateDaysRemainingUntilDue(currentDate));
         node.put("overdueBy", calculateDaysOverdue(currentDate));
-
         ArrayNode openTicketsArray = mapper.createArrayNode();
+
         for (Integer ticketId : retrieveAllOpenTicketIds()) {
             openTicketsArray.add(ticketId);
         }
-        node.set("openTickets", openTicketsArray);
 
+        node.set("openTickets", openTicketsArray);
         ArrayNode closedTicketsArray = mapper.createArrayNode();
+
         for (Integer ticketId : retrieveAllClosedTicketIds()) {
             closedTicketsArray.add(ticketId);
         }
         node.set("closedTickets", closedTicketsArray);
-
         node.put("completionPercentage", calculateCompletionPercentage());
 
         List<ObjectNode> repartitionList = new ArrayList<>();
@@ -231,22 +284,49 @@ public class Milestone implements Subject {
         return node;
     }
 
+    /**
+     * Returns the creation date
+     */
     public LocalDate getCreatedAt() {
         return createdAt;
     }
 
+
+    /**
+     * Attaches an observer
+     */
     @Override
-    public void attach(Observer o) {
-        observers.add(o);
+    public void addObs(final Observer o) {
+        if (!observers.contains(o)) {
+            observers.add(o);
+        }
     }
 
-    @Override
-    public void detach(Observer o) {
-        observers.remove(o);
+    /**
+     * Attaches a developer as observer by username
+     */
+    public void attachDeveloperByUsername(final String username) {
+        main.utiliz.Developer dev = main.AppState.getDeveloperInstanceByUsername(username);
+        if (dev != null) {
+            addObs(dev);
+        }
     }
 
+    /**
+     * Syncs observers with assigned developers
+     */
+    public void syncObserversWithAssignedDevs() {
+        observers.clear();
+        for (String username : assignedDevs) {
+            attachDeveloperByUsername(username);
+        }
+    }
+
+    /**
+     * Notifies all observers
+     */
     @Override
-    public void notifyObservers(String message) {
+    public void notifObs(final String message) {
         for (Observer o : observers) {
             o.update(message);
         }

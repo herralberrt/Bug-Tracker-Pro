@@ -4,48 +4,42 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import main.App;
 import main.AppState;
-import main.ticket.Ticket;
 
-public final class UndoAddComment implements Command {
+public final class StartTestingPhase implements Command {
 
     private final ObjectNode node;
 
     /**
-     * Constructs an UndoAddComment command
+     * Constructs a StartTestingPhase command
      */
-    public UndoAddComment(final ObjectNode node) {
+    public StartTestingPhase(final ObjectNode node) {
         this.node = node;
     }
 
     /**
-     * Executes the undo add comment command
+     * Executes the start testing phase command
      */
     @Override
     public void execute() {
         String username = node.get("username").asText();
-        int ticketId = node.get("ticketID").asInt();
         String timestamp = node.get("timestamp").asText();
-        Ticket ticket = AppState.getTicketById(ticketId);
 
-        if (ticket == null) {
-            return;
-        }
-
-        if (ticket.isAnonymous()) {
+        if (AppState.actMiles()) {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode error = mapper.createObjectNode();
-            error.put("command", "undoAddComment");
+
+            error.put("command", "startTestingPhase");
             error.put("username", username);
             error.put("timestamp", timestamp);
-            error.put("error", "Comments are not allowed on anonymous tickets.");
+            error.put("error", "Cannot start a new testing phase.");
             App.addOutput(error);
             return;
         }
-        ticket.elimUltComm(username);
+        AppState.startTestingPhase(timestamp);
     }
 
     /**
-     * Undoes the undo add comment command
+     * Undoes the start testing phase command
      */
     @Override
     public void undo() {
