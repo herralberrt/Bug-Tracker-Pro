@@ -1,36 +1,45 @@
-# Tema2 POO
+# Bug Tracker Pro
 
-## Structura temei
+A bug tracking system built in Java that simulates a real-world issue management workflow. The application processes JSON-based commands to manage tickets, users, milestones, and notifications — supporting roles like Developer, Manager, and Reporter.
 
-Am organizat tema în mai multe pachete și clase, fiecare având diverse atribuții, precum:
+## Features
 
-- `main.commands` conține toate clasele pentru comenzi, fiecare implementând interfața Command.
-- `main.ticket` include clasele pentru diferitele tipuri de tichete: Bug, FeatureRequest, UiFeedback.
-- `main.milestone` gestionează milestone-urile, cu clase pentru definirea și manipularea acestora.
-- `main.notif` se ocupă de notificări și de logica de observare a evenimentelor importante din aplicație.
-- `main.utiliz` conține clasele pentru utilizatori: Developer, Manager, Reporter și logica asociată acestora.
-- `main.enums` grupează toate tipurile de enum folosite pentru statusuri, priorități, roluri etc.
-- `App` și `AppState` sunt clasele centrale, coordonând funcționarea generală a temei.
+- **Ticket Management** — create and track three ticket types: `Bug`, `FeatureRequest`, and `UiFeedback`, each with priority, severity, status, and business metadata
+- **User Roles** — role-based access for Reporters (submit tickets), Developers (resolve them), and Managers (oversee milestones and assignments)
+- **Milestone Tracking** — group tickets under milestones with progress monitoring and a testing phase lifecycle
+- **Notifications** — users subscribed to a milestone are automatically notified on relevant events (Observer pattern)
+- **Undo Support** — key actions (assign, comment, status change) can be undone
+- **Search** — filter tickets by various criteria
+- **Reports & Metrics** — generate reports for customer impact, ticket risk, resolution efficiency, app stability, and performance
 
-## Design patterns folosite
+## Project Structure
 
-1. `Builder Pattern`: Am folosit acest pattern pentru crearea obiectelor de tip `Ticket`. Builder
-pattern permite construirea tichetelelor cu multe atribute într-un mod clar, fără constructori
-complicați sau parametri în exces.
+```
+src/main/java/main/
+├── commands/     # All executable actions (Command pattern)
+├── ticket/       # Ticket types and factory (Bug, FeatureRequest, UiFeedback)
+├── milestone/    # Milestone definition and management
+├── notif/        # Notification system (Observer pattern)
+├── utiliz/       # User roles: Developer, Manager, Reporter
+├── enums/        # Enums for status, priority, severity, roles, etc.
+├── App.java      # Entry point — reads and dispatches JSON input
+└── AppState.java # Central application state
+```
 
-2. `Command Pattern`: Am implementat acest pattern în pachetul `main.commands`, unde fiecare comandă
-este o clasă care implementează interfața `Command`. Astfel, adăugarea sau modificarea comenzilor se
-face ușor și structurat.
+## Design Patterns
 
-3. `Singleton Pattern`: Am folosit acest pattern pentru `CommandFactory` în pachetul `main.commands`,
-implementat ca un enum. Astfel, există o singură instanță globală a fabricii de comenzi, accesibilă
-din orice parte a aplicației.
+| Pattern | Where | Why |
+|---|---|---|
+| **Builder** | `Ticket` construction | Cleanly assembles tickets with many optional fields |
+| **Command** | `main.commands` package | Each action is an object; easy to extend, undo, or log |
+| **Factory** | `CommandFactory` | Creates the right command instance from JSON input |
+| **Singleton** | `CommandFactory` (enum) | One global factory instance shared across the app |
+| **Observer** | `main.notif` package | Milestone subscribers get notified without tight coupling |
 
-4. `Factory Pattern`: Am folosit acest pattern în clasa `CommandFactory` din pachetul `main.commands`,
-care creează instanțe de comenzi pentru clase din pachetele `main.utiliz`, `main.notif`, `main.ticket`
-și `main.milestone`, pe baza inputului din JSON. Astfel, fiecare acțiune este gestionată centralizat.
+## Tech Stack
 
-5. `Observer Pattern`: Am implementat acest pattern în pachetul `main.notif`, unde notificările pentru
-milestones sunt gestionate printr-un mecanism de observatori. Atunci când apar evenimente importante,
-utilizatorii abonați la milestone primesc automat notificări, fără ca logica principală să depindă
-direct de aceștia.
+- **Java 11+**
+- **Maven** — build and dependency management
+- **JSON** — input/output format for all commands and state
+- **Checkstyle** — enforced code style
+
